@@ -27,6 +27,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .pytest_cache
+htmlcov/
 
 # Translations
 *.mo
@@ -42,12 +43,32 @@ nosetests.xml
 
 # venv
 .venv/
+venv/
+env/
 
 # Cookiecutter
 output/
 
 # vscode
-.vscode
+.vscode/
 
 # notebooks
 notebooks/
+
+# Database files (runtime data)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+!tests/fixtures/*.db
+
+# Uploaded files
+data/uploaded.db
+
+# Model files (generated)
+data/model/
+
+# IDE
+.idea/
+*.swp
+*.swo

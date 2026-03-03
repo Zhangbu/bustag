@@ -1,13 +1,11 @@
 '''
 define url routing process logic
 '''
-import sys
-import os
-import signal
-from aspider.routeing import get_router
+from .crawler import get_router
 from .parser import parse_item
 from .db import save, Item
 from bustag.util import APP_CONFIG, get_full_url, logger
+
 router = get_router()
 MAXPAGE = 30
 
@@ -46,7 +44,7 @@ def verify_fanhao(path, fanhao):
     return exists is None
 
 
-@router.route('/<fanhao:[\w]+-[\d]+>', verify_fanhao, no_parse_links=True)
+@router.route(r'/<fanhao:[\w]+-[\d]+>', verify_fanhao, no_parse_links=True)
 def process_item(text, path, fanhao):
     '''
     process item page
@@ -55,7 +53,5 @@ def process_item(text, path, fanhao):
     url = path
     meta, tags = parse_item(text)
     meta.update(url=url)
-#     logger.debug('meta keys', len(meta.keys()))
-#     logger.debug('tag count', len(tags))
     save(meta, tags)
     print(f'item {fanhao} is processed')

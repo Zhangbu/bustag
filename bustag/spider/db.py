@@ -362,9 +362,30 @@ def get_tags_for_items(items_query):
     return items
 
 
+# Module-level initialization flag
+_initialized = False
+
+
 def init():
+    """
+    Initialize database connection and create tables.
+    
+    This function is idempotent - calling it multiple times has no additional effect.
+    Must be called before any database operations.
+    """
+    global _initialized
+    if _initialized:
+        return
     db.connect(reuse_if_open=True)
     db.create_tables([Item, Tag, ItemTag, ItemRate, LocalItem])
+    _initialized = True
 
 
+def is_initialized():
+    """Check if database has been initialized."""
+    return _initialized
+
+
+# Auto-initialize on module import for backward compatibility
+# In production, consider calling init() explicitly in your application startup
 init()

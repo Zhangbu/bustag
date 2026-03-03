@@ -15,7 +15,7 @@
 
     <title>{{title or ''}}</title>
   </head>
-  <body>
+  <body class="privacy-mode">
 
 <div class="container">
   <div class="row">
@@ -46,6 +46,13 @@
         <a class="nav-link" href="/about">关于</a>
       </li>
     </ul>
+    <div class="privacy-toggle ml-auto">
+      <label class="custom-switch">
+        <input type="checkbox" id="privacy-switch" checked>
+        <span class="slider"></span>
+      </label>
+      <span class="switch-label">隐私模式</span>
+    </div>
   </div>
 </nav>
     </div>

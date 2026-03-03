@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bustag"
+dynamic = ["version"]
+description = "A tag and recommend system for old bus driver"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "gxtrobot", email = "gxtrobot@gmail.com"}
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: Bottle",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+keywords = ["machine-learning", "recommendation", "web-scraping", "bottle"]
+
+dependencies = [
+    "bottle>=0.13.2",
+    "gunicorn>=22.0.0",
+    "peewee>=3.17.1",
+    "aiohttp>=3.9.5",
+    "APScheduler>=3.10.4",
+    "requests>=2.32.3",
+    "requests-html>=0.10.0",
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.2.2",
+    "lxml_html_clean>=0.4.0",
+    "numpy>=1.26.4",
+    "pandas>=2.2.2",
+    "scipy>=1.13.0",
+    "scikit-learn>=1.5.0",
+    "category-encoders>=2.6.3",
+    "joblib>=1.4.2",
+    "click>=8.1.7",
+    "legacy-cgi>=2.6.4",
+    "python-dateutil>=2.9.0",
+    "pytz>=2024.1",
+    "tqdm>=4.66.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+    "pytest-asyncio>=0.23.6",
+    "ruff>=0.4.4",
+    "mypy>=1.10.0",
+    "ipython>=8.24.0",
+    "Sphinx>=7.3.7",
+    "sphinx-rtd-theme>=2.0.0",
+]
+
+[project.scripts]
+bustag = "bustag.main:main"
+
+[project.urls]
+Homepage = "https://github.com/gxtrobot/bustag"
+Repository = "https://github.com/gxtrobot/bustag.git"
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "bustag.__version__"}
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

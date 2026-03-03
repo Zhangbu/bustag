@@ -1,1 +1,78 @@
 .coverimg { cursor: pointer; }
+
+/* 隐私模式样式 */
+.privacy-mode .privacy-img {
+    filter: blur(20px);
+    transition: filter 0.3s ease;
+}
+
+.privacy-mode .privacy-img:hover {
+    filter: blur(0);
+}
+
+.privacy-mode .privacy-title {
+    color: transparent;
+    text-shadow: 0 0 8px #333;
+    transition: all 0.3s ease;
+}
+
+.privacy-mode .privacy-title:hover {
+    color: inherit;
+    text-shadow: none;
+}
+
+/* 隐私模式切换按钮 */
+.privacy-toggle {
+    margin-left: 15px;
+}
+
+.privacy-toggle .custom-switch {
+    display: inline-block;
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+
+.privacy-toggle .custom-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.privacy-toggle .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 26px;
+}
+
+.privacy-toggle .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.privacy-toggle input:checked + .slider {
+    background-color: #2196F3;
+}
+
+.privacy-toggle input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+.privacy-toggle .switch-label {
+    margin-left: 10px;
+    font-size: 14px;
+    vertical-align: middle;
+}

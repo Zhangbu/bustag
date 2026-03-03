@@ -1,36 +1,60 @@
-from collections import defaultdict
+"""
+Bottle web application for bustag.
+
+This module provides the web interface for the bustag application,
+including routes for browsing, tagging, and managing items.
+"""
 import threading
 import traceback
 import sys
 import os
-import bottle
 from multiprocessing import freeze_support
+
+import bottle
 from bottle import route, run, template, static_file, request, response, redirect, hook
 
+# Setup template path before importing local modules
 dirname = os.path.dirname(os.path.realpath(__file__))
 if getattr(sys, 'frozen', False):
     dirname = sys._MEIPASS
 print('dirname:' + dirname)
 bottle.TEMPLATE_PATH.insert(0, dirname + '/views/')
 
+# Import application modules (after template path setup)
+from bustag import __version__
+from bustag.util import logger, get_cwd, get_now_time, get_data_path
+from bustag.spider.db import (
+    get_items, get_local_items, RATE_TYPE, RATE_VALUE,
+    ItemRate, Item, LocalItem, DBError, db as dbconn
+)
+from bustag.spider import db
+from bustag.app.schedule import start_scheduler, add_download_job
+from bustag.spider import bus_spider
+from bustag.app.local import add_local_fanhao, load_tags_db
+import bustag.model.classifier as clf
+
 
 @hook('before_request')
 def _connect_db():
+    """Connect to database before each request."""
     dbconn.connect(reuse_if_open=True)
 
 
 @hook('after_request')
 def _close_db():
+    """Close database connection after each request."""
     if not dbconn.is_closed():
         dbconn.close()
 
 
 @route('/static/<filepath:path>')
 def send_static(filepath):
-    return static_file(filepath, root=dirname+'/static/')
+    """Serve static files."""
+    return static_file(filepath, root=dirname + '/static/')
 
 
 def _remove_extra_tags(item):
+    """Limit the number of tags displayed per category."""
     limit = 10
     tags_dict = item.tags_dict
     tags = ['genre', 'star']
@@ -40,6 +64,7 @@ def _remove_extra_tags(item):
 
 @route('/')
 def index():
+    """Main page showing recommended items."""
     rate_type = RATE_TYPE.SYSTEM_RATE.value
     rate_value = int(request.query.get('like', RATE_VALUE.LIKE.value))
     page = int(request.query.get('page', 1))
@@ -55,6 +80,7 @@ def index():
 
 @route('/tagit')
 def tagit():
+    """Page for tagging items."""
     rate_value = request.query.get('like', None)
     rate_value = None if rate_value == 'None' else rate_value
     rate_type = None
@@ -71,6 +97,7 @@ def tagit():
 
 @route('/tag/<fanhao>', method='POST')
 def tag(fanhao):
+    """Handle tagging action for an item."""
     if request.POST.submit:
         formid = request.POST.formid
         item_rate = ItemRate.get_by_fanhao(fanhao)
@@ -93,6 +120,7 @@ def tag(fanhao):
 
 @route('/correct/<fanhao>', method='POST')
 def correct(fanhao):
+    """Handle correction action for an item rating."""
     if request.POST.submit:
         formid = request.POST.formid
         is_correct = int(request.POST.submit)
@@ -116,6 +144,7 @@ def correct(fanhao):
 
 @route('/model')
 def other_settings():
+    """Show model training status and scores."""
     try:
         _, model_scores = clf.load()
     except FileNotFoundError:
@@ -125,6 +154,7 @@ def other_settings():
 
 @route('/do-training')
 def do_training():
+    """Trigger model training."""
     error_msg = None
     model_scores = None
     try:
@@ -137,6 +167,7 @@ def do_training():
 
 @route('/local_fanhao', method=['GET', 'POST'])
 def update_local_fanhao():
+    """Handle local fanhao upload."""
     msg = ''
     if request.POST.submit:
         fanhao_list = request.POST.fanhao
@@ -155,6 +186,7 @@ def update_local_fanhao():
 
 @route('/local')
 def local():
+    """Show local items."""
     page = int(request.query.get('page', 1))
     items, page_info = get_local_items(page=page)
     for local_item in items:
@@ -165,6 +197,7 @@ def local():
 
 @route('/local_play/<id:int>')
 def local_play(id):
+    """Play a local item."""
     local_item = LocalItem.update_play(id)
     file_path = local_item.path
     logger.debug(file_path)
@@ -173,6 +206,7 @@ def local_play(id):
 
 @route('/load_db', method=['GET', 'POST'])
 def load_db():
+    """Handle database file upload."""
     msg = ''
     errmsg = ''
     if request.POST.submit:
@@ -199,6 +233,7 @@ def load_db():
 
 @route('/about')
 def about():
+    """About page."""
     return template('about', path=request.path)
 
 
@@ -206,25 +241,16 @@ app = bottle.default_app()
 
 
 def start_app():
+    """Start the web application server."""
     t = threading.Thread(target=start_scheduler)
     t.start()
     run(host='0.0.0.0', server='paste', port=8000, debug=True)
-    # run(host='0.0.0.0', port=8000, debug=True, reloader=False)
 
 
 if __name__ == "__main__":
     try:
         freeze_support()
-        from bustag import __version__
         print(f"Bustag server starting: version: {__version__}\n\n")
-        import bustag.model.classifier as clf
-        from bustag.util import logger, get_cwd, get_now_time, get_data_path
-        from bustag.spider.db import (get_items, get_local_items, RATE_TYPE, RATE_VALUE, ItemRate,
-                                      Item, LocalItem, DBError, db as dbconn)
-        from bustag.spider import db
-        from bustag.app.schedule import start_scheduler, add_download_job
-        from bustag.spider import bus_spider
-        from bustag.app.local import add_local_fanhao, load_tags_db
         start_app()
     except Exception as e:
         print('system error')
