@@ -42,9 +42,6 @@
       <li class="nav-item {{ 'active' if path=='/load_db' else ''}}">
         <a class="nav-link" href="/load_db">数据</a>
       </li>
-      <li class="nav-item {{ 'active' if path=='/about' else ''}}">
-        <a class="nav-link" href="/about">关于</a>
-      </li>
     </ul>
     <div class="privacy-toggle ml-auto">
       <label class="custom-switch">
@@ -53,6 +50,11 @@
       </label>
       <span class="switch-label">隐私模式</span>
     </div>
+    <ul class="navbar-nav ml-2">
+      <li class="nav-item">
+        <a class="nav-link" href="/logout">登出</a>
+      </li>
+    </ul>
   </div>
 </nav>
     </div>

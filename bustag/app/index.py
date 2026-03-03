@@ -9,6 +9,7 @@ import traceback
 import sys
 import os
 from multiprocessing import freeze_support
+import uuid
 
 import bottle
 from bottle import route, run, template, static_file, request, response, redirect, hook
@@ -25,13 +26,34 @@ from bustag import __version__
 from bustag.util import logger, get_cwd, get_now_time, get_data_path
 from bustag.spider.db import (
     get_items, get_local_items, RATE_TYPE, RATE_VALUE,
-    ItemRate, Item, LocalItem, DBError, db as dbconn
+    ItemRate, Item, LocalItem, DBError, db as dbconn, User
 )
+
+# Secret key for session cookies
+SECRET_KEY = str(uuid.uuid4())
+
+# Routes that don't require authentication
+PUBLIC_ROUTES = ['/login', '/static']
 from bustag.spider import db
 from bustag.app.schedule import start_scheduler, add_download_job
 from bustag.spider import bus_spider
 from bustag.app.local import add_local_fanhao, load_tags_db
 import bustag.model.classifier as clf
+
+
+def is_logged_in():
+    """Check if user is logged in."""
+    username = request.get_cookie('user', secret=SECRET_KEY)
+    return username is not None
+
+
+def require_login():
+    """Check if current route requires login."""
+    path = request.path
+    for public_route in PUBLIC_ROUTES:
+        if path.startswith(public_route):
+            return False
+    return True
 
 
 @hook('before_request')
@@ -45,6 +67,37 @@ def _close_db():
     """Close database connection after each request."""
     if not dbconn.is_closed():
         dbconn.close()
+
+
+@hook('before_request')
+def _auth_check():
+    """Check authentication for protected routes."""
+    if require_login() and not is_logged_in():
+        redirect('/login')
+
+
+@route('/login', method=['GET', 'POST'])
+def login():
+    """Handle user login."""
+    error = None
+    if request.method == 'POST':
+        username = request.forms.get('username')
+        password = request.forms.get('password')
+        user = User.authenticate(username, password)
+        if user:
+            response.set_cookie('user', username, secret=SECRET_KEY)
+            logger.info(f'User logged in: {username}')
+            redirect('/')
+        else:
+            error = '用户名或密码错误'
+    return template('login', path=request.path, error=error)
+
+
+@route('/logout')
+def logout():
+    """Handle user logout."""
+    response.delete_cookie('user')
+    redirect('/login')
 
 
 @route('/static/<filepath:path>')
@@ -229,12 +282,6 @@ def load_db():
         else:
             errmsg = '请上传数据库文件'
     return template('load_db', path=request.path, msg=msg, errmsg=errmsg)
-
-
-@route('/about')
-def about():
-    """About page."""
-    return template('about', path=request.path)
 
 
 app = bottle.default_app()

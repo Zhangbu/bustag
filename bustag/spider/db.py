@@ -9,6 +9,7 @@ import json
 from peewee import *
 from enum import IntEnum
 from collections import defaultdict
+import hashlib
 from bustag.util import logger, get_data_path, format_datetime, get_now_time, get_full_url
 
 DB_FILE = 'bus.db'
@@ -222,6 +223,48 @@ class LocalItem(BaseModel):
             local_item.last_view_date) if local_item.last_view_date else ''
 
 
+class User(BaseModel):
+    '''
+    user table for authentication
+    '''
+    username = CharField(unique=True)
+    password_hash = CharField()
+    created_at = DateTimeField(default=datetime.datetime.now)
+
+    @staticmethod
+    def hash_password(password):
+        """Hash password using SHA256."""
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    @staticmethod
+    def create_user(username, password):
+        """Create a new user with hashed password."""
+        password_hash = User.hash_password(password)
+        try:
+            user = User.create(username=username, password_hash=password_hash)
+            logger.info(f'Created user: {username}')
+            return user
+        except IntegrityError:
+            logger.debug(f'User already exists: {username}')
+            return None
+
+    @staticmethod
+    def authenticate(username, password):
+        """Authenticate user by username and password."""
+        user = User.get_or_none(User.username == username)
+        if user and user.password_hash == User.hash_password(password):
+            return user
+        return None
+
+    @staticmethod
+    def get_default_user():
+        """Get or create default admin user."""
+        user = User.get_or_none(User.username == 'admin')
+        if not user:
+            user = User.create_user('admin', 'admin123')
+        return user
+
+
 def save(meta_info, tags):
     item_title = meta_info['title']
     tag_objs = []
@@ -377,7 +420,9 @@ def init():
     if _initialized:
         return
     db.connect(reuse_if_open=True)
-    db.create_tables([Item, Tag, ItemTag, ItemRate, LocalItem])
+    db.create_tables([Item, Tag, ItemTag, ItemRate, LocalItem, User])
+    # Ensure default admin user exists
+    User.get_default_user()
     _initialized = True
 
 
