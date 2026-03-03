@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
 from bustag.spider import bus_spider
@@ -50,7 +50,7 @@ def start_scheduler():
     global scheduler
 
     interval = int(APP_CONFIG.get('download.interval', 1800))
-    scheduler = AsyncIOScheduler()
+    scheduler = BackgroundScheduler()
     t1 = datetime.now() + timedelta(seconds=1)
     int_trigger = IntervalTrigger(seconds=interval)
     date_trigger = DateTrigger(run_date=t1)

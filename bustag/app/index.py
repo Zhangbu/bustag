@@ -242,9 +242,8 @@ app = bottle.default_app()
 
 def start_app():
     """Start the web application server."""
-    t = threading.Thread(target=start_scheduler)
-    t.start()
-    run(host='0.0.0.0', server='paste', port=8000, debug=True)
+    start_scheduler()
+    run(host='0.0.0.0', server='wsgiref', port=8000, debug=True)
 
 
 if __name__ == "__main__":

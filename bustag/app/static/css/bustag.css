@@ -21,6 +21,16 @@
     text-shadow: none;
 }
 
+/* 隐私模式 - 标签样式 */
+.privacy-mode .privacy-tag {
+    filter: blur(4px);
+    transition: filter 0.3s ease;
+}
+
+.privacy-mode .privacy-tag:hover {
+    filter: blur(0);
+}
+
 /* 隐私模式切换按钮 */
 .privacy-toggle {
     margin-left: 15px;

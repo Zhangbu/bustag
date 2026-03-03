@@ -31,12 +31,12 @@
 			<a href="{{local_item.item.url}}" target="_blank" class="privacy-title"> {{local_item.item.title[:30]}} </a>
 			<div>
 			% for t in local_item.item.tags_dict['genre']:
-			<span class="badge badge-primary">{{t}}</span>
+			<span class="badge badge-primary privacy-tag">{{t}}</span>
 			% end
 			</div>
 			<div>
 			% for t in local_item.item.tags_dict['star']:
-			<span class="badge badge-warning">{{t}}</span>
+			<span class="badge badge-warning privacy-tag">{{t}}</span>
 			% end
 			</div>
 

@@ -123,7 +123,7 @@ class Crawler:
 
     def _match_route(self, path: str) -> tuple[Optional[Route], Optional[dict]]:
         """Find matching route for path"""
-        for route in self.routes:
+        for route in self.router.routes:
             params = route.match(path)
             if params is not None:
                 if route.verify_func is not None:
