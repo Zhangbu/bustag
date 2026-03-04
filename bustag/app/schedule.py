@@ -5,7 +5,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
 from bustag.spider import bus_spider
 from bustag.spider.crawler import async_download, get_router
-from bustag.util import logger, APP_CONFIG
+from bustag.util import logger, APP_CONFIG, get_full_url
 
 scheduler = None
 
@@ -75,3 +75,62 @@ def add_job(job_func, args):
     t1 = datetime.now() + timedelta(seconds=10)
     date_trigger = DateTrigger(run_date=t1)
     scheduler.add_job(job_func, trigger=date_trigger, args=default_args)
+
+
+def fetch_data(start_page=1, end_page=1, max_count=100):
+    '''
+    手动拉取数据
+
+    Args:
+        start_page: 起始页码
+        end_page: 结束页码
+        max_count: 最大爬取条数
+
+    Returns:
+        dict: 包含爬取结果信息
+    '''
+    root_url = APP_CONFIG.get('download.root_path')
+    if not root_url:
+        logger.error("No root URL configured")
+        return {'success': False, 'message': '未配置根URL'}
+
+    # 限制页数范围
+    start_page = max(1, start_page)
+    end_page = min(30, end_page)  # 受限于 MAXPAGE
+    if start_page > end_page:
+        start_page, end_page = end_page, start_page
+
+    # 限制最大条数
+    max_count = max(1, min(1000, max_count))
+
+    # 生成要爬取的页面URL列表
+    urls = []
+    for page in range(start_page, end_page + 1):
+        page_url = f"{root_url}/page/{page}"
+        urls.append(page_url)
+    
+    logger.info(f"开始手动拉取数据: 页数 {start_page}-{end_page}, 最大条数 {max_count}")
+
+    try:
+        # 设置 base URL
+        router = get_router()
+        router.set_base_url(root_url)
+
+        # 运行爬虫
+        asyncio.run(async_download_wrapper(urls, max_count))
+        
+        # 执行推荐
+        import bustag.model.classifier as clf
+        clf.recommend()
+        
+        message = f'成功拉取数据: 页数 {start_page}-{end_page}, 最大条数 {max_count}'
+        logger.info(message)
+        return {'success': True, 'message': message}
+    except FileNotFoundError:
+        msg = '还没有训练好的模型, 无法推荐'
+        logger.warning(msg)
+        return {'success': False, 'message': msg}
+    except Exception as e:
+        error_msg = f'拉取数据失败: {str(e)}'
+        logger.error(error_msg)
+        return {'success': False, 'message': error_msg}

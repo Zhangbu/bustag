@@ -35,7 +35,7 @@ SECRET_KEY = str(uuid.uuid4())
 # Routes that don't require authentication
 PUBLIC_ROUTES = ['/login', '/static']
 from bustag.spider import db
-from bustag.app.schedule import start_scheduler, add_download_job
+from bustag.app.schedule import start_scheduler, add_download_job, fetch_data
 from bustag.spider import bus_spider
 from bustag.app.local import add_local_fanhao, load_tags_db
 import bustag.model.classifier as clf
@@ -282,6 +282,40 @@ def load_db():
         else:
             errmsg = '请上传数据库文件'
     return template('load_db', path=request.path, msg=msg, errmsg=errmsg)
+
+
+@route('/fetch', method=['GET', 'POST'])
+def fetch():
+    """手动拉取数据页面"""
+    msg = ''
+    errmsg = ''
+    result = None
+    
+    if request.method == 'POST':
+        try:
+            start_page = int(request.forms.get('start_page', 1))
+            end_page = int(request.forms.get('end_page', 1))
+            max_count = int(request.forms.get('max_count', 100))
+            
+            # 参数验证
+            if start_page < 1 or end_page < 1:
+                errmsg = '页码必须大于0'
+            elif start_page > 30 or end_page > 30:
+                errmsg = '页码不能超过30'
+            elif max_count < 1:
+                errmsg = '最大条数必须大于0'
+            elif max_count > 1000:
+                errmsg = '最大条数不能超过1000'
+            else:
+                result = fetch_data(start_page, end_page, max_count)
+                if result['success']:
+                    msg = result['message']
+                else:
+                    errmsg = result['message']
+        except ValueError:
+            errmsg = '请输入有效的数字'
+    
+    return template('fetch', path=request.path, msg=msg, errmsg=errmsg)
 
 
 app = bottle.default_app()

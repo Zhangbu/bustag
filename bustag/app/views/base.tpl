@@ -36,6 +36,9 @@
       <li class="nav-item {{ 'active' if path=='/local' else ''}}">
         <a class="nav-link" href="/local">本地</a>
       </li>
+      <li class="nav-item {{ 'active' if path=='/fetch' else ''}}">
+        <a class="nav-link" href="/fetch">拉取</a>
+      </li>
       <li class="nav-item {{ 'active' if path=='/model' else ''}}">
         <a class="nav-link" href="/model">模型</a>
       </li>
