@@ -1,4 +1,7 @@
 import pytest
+
+pytest.importorskip('sklearn')
+
 from bustag.main import recommend
 
 

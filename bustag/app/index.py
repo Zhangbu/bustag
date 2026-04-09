@@ -14,6 +14,10 @@ import uuid
 import bottle
 from bottle import route, run, template, static_file, request, response, redirect, hook
 
+from bustag.util import init as init_app_config
+
+init_app_config()
+
 # Setup template path before importing local modules
 dirname = os.path.dirname(os.path.realpath(__file__))
 if getattr(sys, 'frozen', False):
@@ -23,20 +27,20 @@ bottle.TEMPLATE_PATH.insert(0, dirname + '/views/')
 
 # Import application modules (after template path setup)
 from bustag import __version__
-from bustag.util import logger, get_cwd, get_now_time, get_data_path
+from bustag.util import logger, get_cwd, get_now_time, get_data_path, APP_CONFIG
+from bustag.spider.sources import get_source
 from bustag.spider.db import (
     get_items, get_local_items, RATE_TYPE, RATE_VALUE,
     ItemRate, Item, LocalItem, DBError, db as dbconn, User
 )
 
 # Secret key for session cookies
-SECRET_KEY = str(uuid.uuid4())
+SECRET_KEY = APP_CONFIG.get('auth.secret_key') or os.environ.get('BUSTAG_SECRET_KEY') or str(uuid.uuid4())
 
 # Routes that don't require authentication
 PUBLIC_ROUTES = ['/login', '/static']
 from bustag.spider import db
 from bustag.app.schedule import start_scheduler, add_download_job, fetch_data
-from bustag.spider import bus_spider
 from bustag.app.local import add_local_fanhao, load_tags_db
 import bustag.model.classifier as clf
 
@@ -85,7 +89,7 @@ def login():
         password = request.forms.get('password')
         user = User.authenticate(username, password)
         if user:
-            response.set_cookie('user', username, secret=SECRET_KEY)
+            response.set_cookie('user', username, secret=SECRET_KEY, httponly=True, samesite='lax')
             logger.info(f'User logged in: {username}')
             redirect('/')
         else:
@@ -198,11 +202,13 @@ def correct(fanhao):
 @route('/model')
 def other_settings():
     """Show model training status and scores."""
+    model_metadata = None
+    model_options = clf.list_models()
     try:
-        _, model_scores = clf.load()
+        _, model_scores, model_metadata = clf.load()
     except FileNotFoundError:
         model_scores = None
-    return template('model', path=request.path, model_scores=model_scores)
+    return template('model', path=request.path, model_scores=model_scores, model_metadata=model_metadata, model_options=model_options)
 
 
 @route('/do-training')
@@ -210,12 +216,23 @@ def do_training():
     """Trigger model training."""
     error_msg = None
     model_scores = None
+    model_metadata = None
+    model_options = clf.list_models()
+    model_name = request.query.get('model', clf.DEFAULT_MODEL_NAME)
     try:
-        _, model_scores = clf.train()
+        _, model_scores, model_metadata = clf.train(model_name=model_name)
     except ValueError as ex:
         logger.exception(ex)
         error_msg = ' '.join(ex.args)
-    return template('model', path=request.path, model_scores=model_scores, error_msg=error_msg)
+    return template(
+        'model',
+        path=request.path,
+        model_scores=model_scores,
+        model_metadata=model_metadata,
+        model_options=model_options,
+        error_msg=error_msg,
+        selected_model=model_name,
+    )
 
 
 @route('/local_fanhao', method=['GET', 'POST'])
@@ -225,13 +242,11 @@ def update_local_fanhao():
     if request.POST.submit:
         fanhao_list = request.POST.fanhao
         tag_like = request.POST.tag_like == '1'
-        missed_fanhao, local_file_count, tag_file_count = add_local_fanhao(
+        missing_urls, local_file_count, tag_file_count = add_local_fanhao(
             fanhao_list, tag_like)
-        if len(missed_fanhao) > 0:
-            urls = [bus_spider.get_url_by_fanhao(
-                fanhao) for fanhao in missed_fanhao]
-            add_download_job(urls)
-            msg = f'上传 {len(missed_fanhao)} 个番号, {local_file_count} 个本地文件'
+        if len(missing_urls) > 0:
+            add_download_job(missing_urls)
+            msg = f'上传 {len(missing_urls)} 个番号, {local_file_count} 个本地文件'
             if tag_like:
                 msg += f', {tag_file_count} 个打标为喜欢'
     return template('local_fanhao', path=request.path, msg=msg)
@@ -270,14 +285,12 @@ def load_db():
             upload.save(name, overwrite=True)
             logger.debug(f'uploaded file saved to {name}')
             try:
-                tag_file_added, missed_fanhaos = load_tags_db()
+                tag_file_added, missing_urls = load_tags_db()
             except DBError:
                 errmsg = '数据库文件错误, 请检查文件是否正确上传'
             else:
-                urls = [bus_spider.get_url_by_fanhao(
-                        fanhao) for fanhao in missed_fanhaos]
-                add_download_job(urls)
-                msg = f'上传 {tag_file_added} 条用户打标数据, {len(missed_fanhaos)} 个番号, '
+                add_download_job(missing_urls)
+                msg = f'上传 {tag_file_added} 条用户打标数据, {len(missing_urls)} 个番号, '
                 msg += '  注意: 需要下载其他数据才能开始建模, 请等候一定时间'
         else:
             errmsg = '请上传数据库文件'
@@ -300,8 +313,8 @@ def fetch():
             # 参数验证
             if start_page < 1 or end_page < 1:
                 errmsg = '页码必须大于0'
-            elif start_page > 30 or end_page > 30:
-                errmsg = '页码不能超过30'
+            elif start_page > get_source().max_page or end_page > get_source().max_page:
+                errmsg = f'页码不能超过{get_source().max_page}'
             elif max_count < 1:
                 errmsg = '最大条数必须大于0'
             elif max_count > 1000:

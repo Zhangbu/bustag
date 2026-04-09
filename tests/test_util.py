@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import configparser
 from bustag import util
+
+util.init(force=True)
 
 
 def test_file_path():
@@ -18,7 +20,7 @@ def test_read_config():
 
 def test_to_localtime():
     """测试时间转换"""
-    t = datetime.utcnow()
+    t = datetime.now(UTC).replace(tzinfo=None)
     local = util.to_localtime(t)
     print(f'Local time: {local}')
 
@@ -28,7 +30,7 @@ def test_testing_mode():
     import os
     print(f'env TESTING: {os.getenv("TESTING")}')
     # 测试模式下 TESTING 应该为 True
-    assert util.TESTING == True
+    assert util.TESTING is True
 
 
 def test_config_defaults():

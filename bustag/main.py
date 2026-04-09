@@ -6,10 +6,12 @@ import click
 from bustag.model.prepare import prepare_predict_data
 from bustag.spider.db import Item, ItemRate, RATE_TYPE
 import bustag.model.classifier as clf
-from bustag.spider import bus_spider
-from bustag.spider.crawler import main as crawler_main, async_download, get_router
-from bustag.util import logger, APP_CONFIG
+from bustag.spider.crawler import main as crawler_main, async_download
+from bustag.spider.sources import get_source
+from bustag.util import logger, APP_CONFIG, init as init_app_config
 import asyncio
+
+init_app_config()
 
 
 @click.command()
@@ -41,11 +43,19 @@ def download(count):
     count_val = int(APP_CONFIG.get('download.count', 100))
     
     # Set base URL
-    router = get_router()
-    router.set_base_url(root_url)
-    
+    source = get_source()
+    source.configure(root_url)
+
     # Run crawler
-    asyncio.run(async_download([root_url], count_val))
+    asyncio.run(
+        async_download(
+            [root_url],
+            count_val,
+            router=source.router,
+            fetcher=source.fetch,
+            url_normalizer=source.normalize_url,
+        )
+    )
 
 
 @click.group()

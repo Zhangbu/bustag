@@ -15,6 +15,9 @@ run:
 server:
 	$(PYTHON3) bustag/app/index.py
 
+start-env:
+	bash scripts/start.sh
+
 publish:
 	docker tag bustag-app-dev gxtrobot/bustag-app:latest
 	docker push gxtrobot/bustag-app:latest

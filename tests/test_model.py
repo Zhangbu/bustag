@@ -1,63 +1,77 @@
-import random
 import pytest
+
+pytest.importorskip('sklearn')
+
 from bustag.model import classifier as clf
-from bustag.model.prepare import prepare_predict_data
-from bustag.spider.db import Item, get_items, ItemRate
 
 
-def test_train_model():
-    """测试训练模型"""
-    try:
-        clf.train()
-        print('Model trained successfully')
-    except Exception as e:
-        print(f'Training failed: {e}')
-        # 可能因为没有足够的打标数据
+def test_create_model_default():
+    model = clf.create_model()
+    assert model is not None
 
 
-def test_recommend():
-    """测试推荐功能"""
-    try:
-        total, count = clf.recommend()
-        print(f'total: {total}')
-        print(f'recommended: {count}')
-    except FileNotFoundError:
-        print('Model file not found, skipping test')
-    except Exception as e:
-        print(f'Recommend failed: {e}')
+def test_create_model_invalid():
+    with pytest.raises(ValueError):
+        clf.create_model('unknown-model')
 
 
-def test_make_model():
-    """
-    随机打标数据生成模型
-    """
-    page = 50
-    no_rate_items = []
-    for i in range(1, page):
-        items, _ = get_items(None, None, i)
-        no_rate_items.extend(items)
-    
-    if not no_rate_items:
-        print('No items found, skipping test')
-        return
-    
-    size = len(no_rate_items)
-    like_ratio = 0.4
-    like_items = []
-    unlike_items = []
-    for item in no_rate_items:
-        if random.random() < like_ratio:
-            like_items.append(item)
-        else:
-            unlike_items.append(item)
-    print(f'like items: {len(like_items)}, unlike items: {len(unlike_items)}')
-    
-    for item in like_items:
-        ItemRate.saveit(1, 1, item.fanhao)
-    for item in unlike_items:
-        ItemRate.saveit(1, 0, item.fanhao)
+def test_list_models():
+    model_names = {model['name'] for model in clf.list_models()}
+    assert 'logistic_regression' in model_names
+    assert 'knn' in model_names
 
-    try:
-        clf.train()
-    except Exception as e:
-        print(f'Training failed: {e}')
+
+def test_evaluate_handles_single_class_predictions():
+    scores = clf.evaluate([1, 1, 1], [1, 1, 1], [1])
+    assert scores['f1'] == 1.0
+    assert scores['tp'] == 3
+    assert scores['tn'] == 0
+
+
+def test_train_model(monkeypatch):
+    dataset = {
+        'X_train': [[0, 1], [1, 0], [1, 1], [0, 0], [1, 0], [0, 1]],
+        'X_test': [[1, 1], [0, 0]],
+        'y_train': [1, 0, 1, 0, 0, 1],
+        'y_test': [1, 0],
+        'target_names': [0, 1],
+        'class_counts': {0: 3, 1: 3},
+        'feature_count': 2,
+        'total': 200,
+    }
+
+    monkeypatch.setattr(clf, 'prepare_data', lambda: dataset)
+    captured = {}
+
+    def fake_dump_model(path, models):
+        captured['path'] = path
+        captured['models'] = models
+
+    monkeypatch.setattr(clf, 'dump_model', fake_dump_model)
+    model, scores, metadata = clf.train()
+    assert model is not None
+    assert scores['accuracy'] >= 0
+    assert metadata['model_name'] == clf.DEFAULT_MODEL_NAME
+    assert 'models' in captured
+
+
+def test_recommend(monkeypatch):
+    monkeypatch.setattr(clf, 'prepare_predict_data', lambda: (['A', 'B'], [[0, 1], [1, 0]]))
+    monkeypatch.setattr(clf, 'predict', lambda X: [1, 0])
+
+    saved = []
+
+    class DummyRate:
+        def __init__(self, rate_type, rate_value, item_id):
+            self.rate_type = rate_type
+            self.rate_value = rate_value
+            self.item_id = item_id
+
+        def save(self):
+            saved.append((self.item_id, self.rate_value))
+
+    monkeypatch.setattr(clf, 'ItemRate', DummyRate)
+    total, count = clf.recommend()
+    assert total == 2
+    assert count == 1
+    assert saved == [('A', 1), ('B', 0)]

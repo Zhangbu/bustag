@@ -3,19 +3,27 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
-from bustag.spider import bus_spider
-from bustag.spider.crawler import async_download, get_router
-from bustag.util import logger, APP_CONFIG, get_full_url
+from bustag.spider.crawler import async_download
+from bustag.spider.sources import get_source
+from bustag.util import logger, APP_CONFIG
 
 scheduler = None
 
 
 async def async_download_wrapper(urls: list, count: int, no_parse_links: bool = False):
     """Async wrapper for download"""
-    router = get_router()
+    source = get_source()
+    router = source.router
     if urls:
         router.set_base_url(urls[0])
-    await async_download(urls, count, no_parse_links)
+    await async_download(
+        urls,
+        count,
+        no_parse_links,
+        router=router,
+        fetcher=source.fetch,
+        url_normalizer=source.normalize_url,
+    )
 
 
 def download(loop=None, no_parse_links=False, urls=None):
@@ -50,6 +58,7 @@ def start_scheduler():
     global scheduler
 
     interval = int(APP_CONFIG.get('download.interval', 1800))
+    source = get_source()
     scheduler = BackgroundScheduler()
     t1 = datetime.now() + timedelta(seconds=1)
     int_trigger = IntervalTrigger(seconds=interval)
@@ -96,7 +105,8 @@ def fetch_data(start_page=1, end_page=1, max_count=100):
 
     # 限制页数范围
     start_page = max(1, start_page)
-    end_page = min(30, end_page)  # 受限于 MAXPAGE
+    source = get_source()
+    end_page = min(source.max_page, end_page)
     if start_page > end_page:
         start_page, end_page = end_page, start_page
 
@@ -104,18 +114,12 @@ def fetch_data(start_page=1, end_page=1, max_count=100):
     max_count = max(1, min(1000, max_count))
 
     # 生成要爬取的页面URL列表
-    urls = []
-    for page in range(start_page, end_page + 1):
-        page_url = f"{root_url}/page/{page}"
-        urls.append(page_url)
+    source.configure(root_url)
+    urls = source.build_page_urls(start_page, end_page)
     
     logger.info(f"开始手动拉取数据: 页数 {start_page}-{end_page}, 最大条数 {max_count}")
 
     try:
-        # 设置 base URL
-        router = get_router()
-        router.set_base_url(root_url)
-
         # 运行爬虫
         asyncio.run(async_download_wrapper(urls, max_count))
         

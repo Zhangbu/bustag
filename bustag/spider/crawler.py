@@ -2,6 +2,7 @@
 Modern async crawler using aiohttp (replaces aspider)
 '''
 import asyncio
+from collections import deque
 import re
 from typing import Callable, Optional
 from urllib.parse import urljoin, urlparse
@@ -63,28 +64,39 @@ class Router:
         self.base_url = url
 
 
-# Global router instance
-_router: Optional[Router] = None
+_default_router: Optional[Router] = None
 
 
 def get_router() -> Router:
-    """Get or create global router instance"""
-    global _router
-    if _router is None:
-        _router = Router()
-    return _router
+    """Get or create a default router for backward compatibility."""
+    global _default_router
+    if _default_router is None:
+        _default_router = Router()
+    return _default_router
 
 
 class Crawler:
     """Async web crawler using aiohttp"""
 
-    def __init__(self, router: Router, max_count: int = 100, no_parse_links: bool = False):
+    def __init__(
+        self,
+        router: Router,
+        max_count: int = 100,
+        no_parse_links: bool = False,
+        concurrency: int = 5,
+        fetcher: Optional[Callable] = None,
+        url_normalizer: Optional[Callable[[str], str]] = None,
+    ):
         self.router = router
         self.max_count = max_count
         self.no_parse_links = no_parse_links
+        self.concurrency = max(1, concurrency)
+        self.fetcher = fetcher
+        self.url_normalizer = url_normalizer
         self.processed_count = 0
         self.seen_urls: set[str] = set()
-        self.urls_to_process: list[str] = []
+        self.urls_to_process: deque[str] = deque()
+        self._lock = asyncio.Lock()
 
     def _get_full_url(self, path: str) -> str:
         """Convert path to full URL"""
@@ -96,29 +108,59 @@ class Crawler:
         """Extract all links from HTML"""
         links = []
         try:
-            soup = BeautifulSoup(html, 'lxml')
+            parser = 'xml' if '<loc>' in html or html.lstrip().startswith('<?xml') else 'lxml'
+            soup = BeautifulSoup(html, parser)
             for a_tag in soup.find_all('a', href=True):
                 href = a_tag['href']
-                full_url = urljoin(base_url, href)
-                # Only keep same-domain links
-                if urlparse(full_url).netloc == urlparse(base_url).netloc:
+                full_url = self._normalize_url(urljoin(base_url, href))
+                if self._is_same_domain(full_url, base_url):
+                    links.append(full_url)
+            for loc_tag in soup.find_all('loc'):
+                loc = loc_tag.get_text(strip=True)
+                if not loc:
+                    continue
+                full_url = self._normalize_url(loc)
+                if self._is_same_domain(full_url, base_url):
                     links.append(full_url)
         except Exception as e:
             logger.warning(f"Error extracting links: {e}")
         return links
 
+    def _normalize_url(self, url: str) -> str:
+        if self.url_normalizer is None:
+            return url
+        return self.url_normalizer(url)
+
+    def _is_same_domain(self, url: str, base_url: str) -> bool:
+        return urlparse(url).netloc == urlparse(self._normalize_url(base_url)).netloc
+
     async def _fetch(self, session: aiohttp.ClientSession, url: str) -> Optional[str]:
         """Fetch URL content"""
-        try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                if response.status == 200:
-                    return await response.text()
-                else:
+        if self.fetcher is not None:
+            try:
+                if asyncio.iscoroutinefunction(self.fetcher):
+                    return await self.fetcher(url)
+                return await asyncio.to_thread(self.fetcher, url)
+            except RuntimeError as e:
+                logger.warning(str(e))
+                return None
+            except Exception as e:
+                logger.warning(f"Custom fetcher error for {url}: {e}")
+                return None
+        headers = {'User-Agent': 'bustag/0.3 (+https://github.com/gxtrobot/bustag)'}
+        for attempt in range(1, 4):
+            try:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=30), headers=headers) as response:
+                    if response.status == 200:
+                        return await response.text()
                     logger.warning(f"HTTP {response.status} for {url}")
-        except asyncio.TimeoutError:
-            logger.warning(f"Timeout fetching {url}")
-        except Exception as e:
-            logger.warning(f"Error fetching {url}: {e}")
+                    if response.status in {403, 404}:
+                        return None
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout fetching {url}, attempt {attempt}")
+            except Exception as e:
+                logger.warning(f"Error fetching {url}, attempt {attempt}: {e}")
+            await asyncio.sleep(min(attempt, 3))
         return None
 
     def _match_route(self, path: str) -> tuple[Optional[Route], Optional[dict]]:
@@ -138,12 +180,11 @@ class Crawler:
 
     async def _process_url(self, session: aiohttp.ClientSession, url: str):
         """Process a single URL"""
-        if url in self.seen_urls:
-            return
-        self.seen_urls.add(url)
-
-        if self.processed_count >= self.max_count:
-            return
+        url = self._normalize_url(url)
+        async with self._lock:
+            if url in self.seen_urls or self.processed_count >= self.max_count:
+                return
+            self.seen_urls.add(url)
 
         path = self.router.get_url_path(url)
         route, params = self._match_route(path)
@@ -155,7 +196,8 @@ class Crawler:
         if html is None:
             return
 
-        self.processed_count += 1
+        async with self._lock:
+            self.processed_count += 1
 
         try:
             await route.handler(html, path, **params) if asyncio.iscoroutinefunction(route.handler) else route.handler(html, path, **params)
@@ -165,26 +207,47 @@ class Crawler:
         # Extract and queue more links if needed
         if not route.no_parse_links and not self.no_parse_links:
             links = self._extract_links(html, url)
-            for link in links:
-                if link not in self.seen_urls:
-                    self.urls_to_process.append(link)
+            async with self._lock:
+                for link in links:
+                    if link not in self.seen_urls:
+                        self.urls_to_process.append(link)
+
+    async def _worker(self, session: aiohttp.ClientSession):
+        while True:
+            async with self._lock:
+                if not self.urls_to_process or self.processed_count >= self.max_count:
+                    return
+                url = self.urls_to_process.popleft()
+            await self._process_url(session, url)
 
     async def crawl(self, start_urls: list[str]):
         """Start crawling from given URLs"""
-        self.urls_to_process = list(start_urls)
+        self.urls_to_process = deque(self._normalize_url(url) for url in start_urls)
         self.seen_urls.clear()
         self.processed_count = 0
 
         async with aiohttp.ClientSession() as session:
-            while self.urls_to_process and self.processed_count < self.max_count:
-                url = self.urls_to_process.pop(0)
-                await self._process_url(session, url)
+            workers = [asyncio.create_task(self._worker(session)) for _ in range(self.concurrency)]
+            await asyncio.gather(*workers)
 
 
-async def async_download(start_urls: list[str], max_count: int = 100, no_parse_links: bool = False):
+async def async_download(
+    start_urls: list[str],
+    max_count: int = 100,
+    no_parse_links: bool = False,
+    router: Optional[Router] = None,
+    fetcher: Optional[Callable] = None,
+    url_normalizer: Optional[Callable[[str], str]] = None,
+):
     """Download and process URLs"""
-    router = get_router()
-    crawler = Crawler(router, max_count=max_count, no_parse_links=no_parse_links)
+    router = router or get_router()
+    crawler = Crawler(
+        router,
+        max_count=max_count,
+        no_parse_links=no_parse_links,
+        fetcher=fetcher,
+        url_normalizer=url_normalizer,
+    )
     await crawler.crawl(start_urls)
 
 
@@ -195,18 +258,28 @@ def download(loop: asyncio.AbstractEventLoop, options: dict):
     no_parse_links = options.get('no_parse_links', False)
 
     # Set base URL from first URL
-    router = get_router()
+    router = options.get('router') or get_router()
     if urls:
         router.set_base_url(urls[0])
 
     # Run async download
-    asyncio.run(async_download(urls, count, no_parse_links))
+    asyncio.run(
+        async_download(
+            urls,
+            count,
+            no_parse_links,
+            router=router,
+            fetcher=options.get('fetcher'),
+            url_normalizer=options.get('url_normalizer'),
+        )
+    )
 
 
 def main():
     """Main entry point for CLI"""
     import sys
     from bustag.util import APP_CONFIG
+    from bustag.spider.sources import get_source
 
     # Get root URL from config
     root_url = APP_CONFIG.get('download.root_path')
@@ -217,8 +290,17 @@ def main():
     count = int(APP_CONFIG.get('download.count', 100))
 
     # Set base URL
-    router = get_router()
+    source = get_source()
+    router = source.router
     router.set_base_url(root_url)
 
     # Run crawler
-    asyncio.run(async_download([root_url], count))
+    asyncio.run(
+        async_download(
+            [root_url],
+            count,
+            router=router,
+            fetcher=source.fetch,
+            url_normalizer=source.normalize_url,
+        )
+    )

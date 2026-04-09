@@ -5,6 +5,7 @@ import re
 from peewee import SqliteDatabase, DatabaseError
 
 from bustag.spider.db import Item, LocalItem, ItemRate, RATE_TYPE, RATE_VALUE, db, DBError
+from bustag.spider.sources import get_source
 from bustag.util import logger, get_data_path
 
 
@@ -18,6 +19,7 @@ def add_local_fanhao(fanhao, tag_like):
     missed_fanhaos = []
     local_file_added = 0
     tag_file_added = 0
+    source = get_source()
     pattern = r'([A-Z]+)-?([0-9]+)'
     for row in rows:
         if ',' in row:
@@ -50,7 +52,7 @@ def add_local_fanhao(fanhao, tag_like):
                     tag_file_added += 1
             if not Item.get_by_fanhao(fanhao):
                 # add to get from spider
-                missed_fanhaos.append(fanhao)
+                missed_fanhaos.append(source.get_item_url(fanhao))
     logger.debug(f'missed_fanhaos:{missed_fanhaos}')
     logger.debug(f'tag_file_added:{tag_file_added}')
     logger.debug(f'local_file_added:{local_file_added}')
@@ -74,6 +76,7 @@ def load_tags_db():
     tag_data = []
     missed_fanhaos = []
     tag_file_added = 0
+    source = get_source()
     sql_old = '''select item_rate.rate_value, item.fanhao
                 from item_rate inner
                 join item on item_rate.item_id = item.id
@@ -102,7 +105,7 @@ def load_tags_db():
                 tag_file_added += 1
             if not Item.get_by_fanhao(fanhao):
                 # add to get from spider
-                missed_fanhaos.append(fanhao)
+                missed_fanhaos.append(source.get_item_url(fanhao))
     logger.debug(tag_data)
     logger.info(f'added user tag rate: {tag_file_added}')
     logger.info(f'added fanhao to download: {len(missed_fanhaos)}')

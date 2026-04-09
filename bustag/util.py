@@ -14,10 +14,25 @@ MODEL_PATH = 'model/'
 APP_CONFIG = {}
 DEFAULT_CONFIG = {
     'download': {
+        'source': 'missav',
         'count': 100,
         'interval': 3600
+    },
+    'missav': {
+        'language': 'en',
+        'list_path': '/en',
+        'proxy': '',
+        'browser': 'chrome136',
+        'user_agent': 'Mozilla/5.0',
+        'cookie': '',
+    },
+    'auth': {
+        'secret_key': '',
+        'admin_username': 'admin',
+        'admin_password': ''
     }
 }
+_initialized = False
 
 
 def get_cwd():
@@ -37,14 +52,16 @@ def check_testing():
 def setup_logging():
     fmt = '%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s \n %(message)s '
     formatter = logging.Formatter(fmt)
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    if not logger.handlers:
+        ch = logging.StreamHandler()
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
     logger.setLevel(logging.WARNING)
     if TESTING:
         logger.setLevel(logging.DEBUG)
         pw_logger = logging.getLogger('peewee')
-        pw_logger.addHandler(logging.StreamHandler())
+        if not pw_logger.handlers:
+            pw_logger.addHandler(logging.StreamHandler())
         pw_logger.setLevel(logging.DEBUG)
 
 
@@ -68,10 +85,9 @@ def check_config():
     config_path = get_data_path(CONFIG_FILE)
     abs_path = os.path.abspath(config_path)
     if not os.path.exists(abs_path):
-        logger.error(
-            f'file {abs_path} not exists,  please make sure file exists and configed, system quit now!')
-        logger.error(f'文件 {abs_path} 不存在, 请检查文件存在并已配置, 系统退出!')
-        sys.exit(1)
+        raise FileNotFoundError(
+            f'配置文件不存在: {abs_path}. 请先创建 data/config.ini'
+        )
 
 
 def load_config():
@@ -80,13 +96,30 @@ def load_config():
     conf = configparser.ConfigParser()
     conf.read_dict(DEFAULT_CONFIG)
     conf.read(config_path)
+    APP_CONFIG.clear()
     for section in conf.sections():
         APP_CONFIG[section.lower()] = dict(conf[section])
         for key in conf.options(section):
             value = conf.get(section, key)
             key = section + '.' + key
             APP_CONFIG[key.lower()] = value
+    env_secret = os.environ.get('BUSTAG_SECRET_KEY')
+    if env_secret:
+        APP_CONFIG['auth.secret_key'] = env_secret
+    env_admin_password = os.environ.get('BUSTAG_ADMIN_PASSWORD')
+    if env_admin_password:
+        APP_CONFIG['auth.admin_password'] = env_admin_password
+    env_missav_cookie = os.environ.get('BUSTAG_MISSAV_COOKIE')
+    if env_missav_cookie:
+        APP_CONFIG['missav.cookie'] = env_missav_cookie
+    env_missav_proxy = os.environ.get('BUSTAG_MISSAV_PROXY')
+    if env_missav_proxy:
+        APP_CONFIG['missav.proxy'] = env_missav_proxy
+    env_missav_user_agent = os.environ.get('BUSTAG_MISSAV_USER_AGENT')
+    if env_missav_user_agent:
+        APP_CONFIG['missav.user_agent'] = env_missav_user_agent
     logger.debug(APP_CONFIG)
+    return APP_CONFIG
 
 
 def format_datetime(dt):
@@ -103,19 +136,20 @@ def to_localtime(utc_dt):
 
 
 def check_model_folder():
-    model_path = os.path.join(DATA_PATH, MODEL_PATH)
+    model_path = get_data_path(MODEL_PATH)
     abs_path = os.path.abspath(model_path)
     if not os.path.exists(abs_path):
         print(f'created model folder: {abs_path}')
-        os.mkdir(abs_path)
+        os.makedirs(abs_path, exist_ok=True)
 
 
-def init():
-    print(f'CWD: {get_cwd()}')
+def init(force: bool = False):
+    global _initialized
+    if _initialized and not force:
+        return APP_CONFIG
     check_testing()
     setup_logging()
-    load_config()
+    config = load_config()
     check_model_folder()
-
-
-init()
+    _initialized = True
+    return config

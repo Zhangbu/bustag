@@ -1,29 +1,26 @@
-'''
-prepare data for model training
-'''
-import json
-import operator
-import pickle
+"""
+Prepare data for model training and prediction.
+"""
+from __future__ import annotations
+
+from collections import Counter
+
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
-from bustag.spider.db import get_items, RATE_TYPE, ItemRate, Item, get_tags_for_items
+from sklearn.preprocessing import MultiLabelBinarizer
+
 from bustag.model.persist import dump_model, load_model
-from bustag.util import logger, get_data_path, MODEL_PATH
+from bustag.spider.db import RATE_TYPE, get_items
+from bustag.util import MODEL_PATH, get_data_path
 
 BINARIZER_PATH = MODEL_PATH + 'label_binarizer.pkl'
 
 
 def load_data():
-    '''
-    load data from database and do processing
-    '''
-    rate_type = RATE_TYPE.USER_RATE.value
-    rate_value = None
-    page = None
-    items, _ = get_items(rate_type=rate_type, rate_value=rate_value,
-                         page=page)
+    """
+    Load labeled items from the database.
+    """
+    items, _ = get_items(rate_type=RATE_TYPE.USER_RATE.value, rate_value=None, page=None)
     return items
 
 
@@ -32,57 +29,84 @@ def as_dict(item):
     for tags in item.tags_dict.values():
         for tag in tags:
             tags_set.add(tag)
-    d = {
+    return {
         'id': item.fanhao,
         'title': item.title,
         'fanhao': item.fanhao,
         'url': item.url,
         'add_date': item.add_date,
-        'tags': tags_set,
+        'tags': sorted(tags_set),
         'cover_img_url': item.cover_img_url,
-        'target': item.rate_value
+        'target': int(item.rate_value),
     }
-    return d
 
 
-def process_data(df):
-    '''
-    do all processing , like onehotencode tag string
-    '''
-    X = df[['tags']]
-    y = df[['target']]
+def build_dataframe(items):
+    dicts = [as_dict(item) for item in items]
+    return pd.DataFrame(
+        dicts,
+        columns=['id', 'title', 'fanhao', 'url', 'add_date', 'tags', 'cover_img_url', 'target'],
+    )
 
-    mlb = MultiLabelBinarizer()
-    X = mlb.fit_transform(X.tags.values)
-    dump_model(get_data_path(BINARIZER_PATH), mlb)
-    return X, y
+
+def process_data(df, *, fit=True):
+    """
+    Transform tags into model features.
+    """
+    feature_df = df[['tags']].copy()
+    target = df['target'].astype(int).to_numpy() if 'target' in df.columns else None
+
+    if fit:
+        mlb = MultiLabelBinarizer()
+        X = mlb.fit_transform(feature_df['tags'].values)
+        dump_model(get_data_path(BINARIZER_PATH), mlb)
+    else:
+        mlb = load_model(get_data_path(BINARIZER_PATH))
+        X = mlb.transform(feature_df['tags'].values)
+    return X, target, mlb
 
 
 def split_data(X, y):
+    """
+    Split train/test data while preserving class distribution when possible.
+    """
+    class_counts = Counter(y)
+    stratify = y if len(class_counts) > 1 and min(class_counts.values()) >= 2 else None
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42)
-    return (X_train, X_test, y_train, y_test)
+        X,
+        y,
+        test_size=0.25,
+        random_state=42,
+        stratify=stratify,
+    )
+    return X_train, X_test, y_train, y_test
 
 
 def prepare_data():
     items = load_data()
-    dicts = (as_dict(item) for item in items)
-    df = pd.DataFrame(dicts, columns=['id', 'title', 'fanhao', 'url', 'add_date', 'tags', 'cover_img_url',
-                                      'target'])
-    X, y = process_data(df)
-    return split_data(X, y)
+    df = build_dataframe(items)
+    if df.empty:
+        raise ValueError('没有可用于训练的打标数据')
+
+    X, y, mlb = process_data(df, fit=True)
+    X_train, X_test, y_train, y_test = split_data(X, y)
+    return {
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test,
+        'target_names': sorted(set(int(v) for v in y)),
+        'class_counts': {int(k): int(v) for k, v in Counter(y).items()},
+        'feature_count': len(mlb.classes_),
+        'total': int(len(y)),
+    }
 
 
 def prepare_predict_data():
-    # get not rated data
-    rate_type = None
-    rate_value = None
-    page = None
-    unrated_items, _ = get_items(
-        rate_type=rate_type, rate_value=rate_value, page=page)
-    mlb = load_model(get_data_path(BINARIZER_PATH))
-    dicts = (as_dict(item) for item in unrated_items)
-    df = pd.DataFrame(dicts, columns=['id', 'tags'])
+    unrated_items, _ = get_items(rate_type=None, rate_value=None, page=None)
+    df = pd.DataFrame((as_dict(item) for item in unrated_items), columns=['id', 'tags'])
+    if df.empty:
+        return [], []
     df.set_index('id', inplace=True)
-    X = mlb.transform(df.tags.values)
-    return df.index.values, X
+    X, _, _ = process_data(df, fit=False)
+    return df.index.to_list(), X

@@ -10,7 +10,8 @@ from peewee import *
 from enum import IntEnum
 from collections import defaultdict
 import hashlib
-from bustag.util import logger, get_data_path, format_datetime, get_now_time, get_full_url
+import os
+from bustag.util import logger, get_data_path, format_datetime, get_now_time, get_full_url, APP_CONFIG
 
 DB_FILE = 'bus.db'
 db = SqliteDatabase(get_data_path(DB_FILE), pragmas={
@@ -230,11 +231,28 @@ class User(BaseModel):
     username = CharField(unique=True)
     password_hash = CharField()
     created_at = DateTimeField(default=datetime.datetime.now)
+    HASH_ITERATIONS = 600_000
 
     @staticmethod
-    def hash_password(password):
-        """Hash password using SHA256."""
-        return hashlib.sha256(password.encode()).hexdigest()
+    def hash_password(password, salt=None):
+        """Hash password using PBKDF2."""
+        if salt is None:
+            salt = os.urandom(16).hex()
+        digest = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode(),
+            salt.encode(),
+            User.HASH_ITERATIONS,
+        ).hex()
+        return f'{salt}${digest}'
+
+    @staticmethod
+    def verify_password(password, stored_hash):
+        if '$' not in stored_hash:
+            return stored_hash == hashlib.sha256(password.encode()).hexdigest()
+        salt, expected = stored_hash.split('$', 1)
+        actual = User.hash_password(password, salt).split('$', 1)[1]
+        return actual == expected
 
     @staticmethod
     def create_user(username, password):
@@ -252,16 +270,21 @@ class User(BaseModel):
     def authenticate(username, password):
         """Authenticate user by username and password."""
         user = User.get_or_none(User.username == username)
-        if user and user.password_hash == User.hash_password(password):
+        if user and User.verify_password(password, user.password_hash):
             return user
         return None
 
     @staticmethod
     def get_default_user():
         """Get or create default admin user."""
-        user = User.get_or_none(User.username == 'admin')
+        username = APP_CONFIG.get('auth.admin_username', 'admin')
+        password = APP_CONFIG.get('auth.admin_password') or os.environ.get('BUSTAG_ADMIN_PASSWORD')
+        user = User.get_or_none(User.username == username)
         if not user:
-            user = User.create_user('admin', 'admin123')
+            if not password:
+                logger.warning('Skipping default admin creation because no admin password is configured')
+                return None
+            user = User.create_user(username, password)
         return user
 
 

@@ -77,10 +77,24 @@ mkdir -p bustag/data && cd bustag
 
 # 2. 创建配置文件 config.ini（必需）
 cat > data/config.ini << 'EOF'
-[root]
+[download]
+source = bus
 root_path = https://www.busjav.com
 count = 100
 interval = 1800
+
+[missav]
+language = en
+list_path = /en
+proxy = http://127.0.0.1:7897
+browser = chrome136
+user_agent = Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+cookie =
+
+[auth]
+admin_username = admin
+admin_password = change-this-password
+secret_key = change-this-secret-key
 EOF
 
 # 3. 启动容器
@@ -121,10 +135,24 @@ pip install -e .
 # 4. 创建配置文件
 mkdir -p data
 cat > data/config.ini << 'EOF'
-[root]
+[download]
+source = bus
 root_path = https://www.busjav.com
 count = 100
 interval = 1800
+
+[missav]
+language = en
+list_path = /en
+proxy = http://127.0.0.1:7897
+browser = chrome136
+user_agent = Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+cookie =
+
+[auth]
+admin_username = admin
+admin_password = change-this-password
+secret_key = change-this-secret-key
 EOF
 
 # 5. 运行项目
@@ -163,9 +191,63 @@ docker run --rm -d -e TZ=Asia/Shanghai -v $(pwd)/data:/app/data -p 8000:8000 bus
 ```
 
 - **config.ini** - 系统配置文件(必须)
+  - `[download]`
+  - `source`: 站点适配器名称, 当前支持 `bus`、`missav`
   - `root_path`: bus网站主页地址, 爬虫起始地址
   - `count`: 每次下载总数, 建议500以下
   - `interval`: 每次下载间隔时间, 单位秒, 建议不低于1800秒
+  - `[missav]`
+  - `language`: 当前 MissAV adapter 使用的语言路径, 默认 `en`
+  - `list_path`: MissAV 列表页路径, 默认 `/en`
+  - `proxy`: MissAV 抓取代理
+  - `browser`: `curl_cffi` 浏览器指纹, 默认 `chrome136`
+  - `user_agent`: MissAV 请求使用的 User-Agent
+  - `cookie`: 可留空, 建议用 `BUSTAG_MISSAV_COOKIE` 环境变量注入
+  - `[auth]`
+  - `admin_username`: 默认管理员用户名
+  - `admin_password`: 默认管理员密码, 建议通过 `BUSTAG_ADMIN_PASSWORD` 环境变量覆盖
+  - `secret_key`: 登录 cookie 签名密钥, 建议通过 `BUSTAG_SECRET_KEY` 环境变量覆盖
+
+### MissAV Cookie
+
+推荐不要把 `missav.cookie` 直接写进 `data/config.ini`，而是在启动前注入环境变量：
+
+```bash
+export BUSTAG_MISSAV_COOKIE='user_uuid=...; cf_clearance=...'
+export BUSTAG_MISSAV_PROXY='http://127.0.0.1:7897'
+export BUSTAG_MISSAV_USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36'
+```
+
+如果你在 WSL 的 conda 环境里运行，也可以这样：
+
+```bash
+conda run -n bustag env \
+  BUSTAG_MISSAV_COOKIE='user_uuid=...; cf_clearance=...' \
+  BUSTAG_MISSAV_PROXY='http://127.0.0.1:7897' \
+  BUSTAG_MISSAV_USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36' \
+  python bustag/app/index.py
+```
+
+### One Command Start
+
+项目根目录里提供了：
+
+- `.env.example` - 本地环境变量模板
+- `scripts/start.sh` - 读取 `.env` 后在 conda `bustag` 环境里启动项目
+
+推荐这样使用：
+
+```bash
+cp .env.example .env
+# 编辑 .env，填入你自己的 cookie
+bash scripts/start.sh
+```
+
+或者：
+
+```bash
+make start-env
+```
 
 - **bus.db** - 数据库文件(可选)
 - **model 目录** - 系统训练生成的模型

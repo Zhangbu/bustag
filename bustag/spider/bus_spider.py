@@ -1,57 +1,16 @@
-'''
-define url routing process logic
-'''
-from .crawler import get_router
-from .parser import parse_item
-from .db import save, Item
-from bustag.util import APP_CONFIG, get_full_url, logger
+"""
+Backward-compatible wrappers for the default bus source adapter.
+"""
+from bustag.spider.sources import get_source
 
-router = get_router()
-MAXPAGE = 30
+adapter = get_source('bus')
+router = adapter.router
+process_item = adapter.process_item
+process_page = adapter.process_page
+verify_fanhao = adapter.verify_fanhao
+verify_page_path = adapter.verify_page_path
+MAXPAGE = adapter.max_page
 
 
 def get_url_by_fanhao(fanhao):
-    # return full url
-    url = get_full_url(fanhao)
-    return url
-
-
-def verify_page_path(path, no):
-    logger.debug(f'verify page {path} , args {no}')
-    no = int(no)
-    if no <= MAXPAGE:
-        return True
-    else:
-        return False
-
-
-@router.route('/page/<no>', verify_page_path)
-def process_page(text, path, no):
-    '''
-    process list page
-    '''
-    logger.debug(f'page {no} has length {len(text)}')
-    print(f'process page {no}')
-
-
-def verify_fanhao(path, fanhao):
-    '''
-    verify fanhao before add it to queue
-    '''
-    exists = Item.get_by_fanhao(fanhao)
-    logger.debug(
-        f'verify {fanhao}: , exists:{exists is not None}, skip {path}')
-    return exists is None
-
-
-@router.route(r'/<fanhao:[\w]+-[\d]+>', verify_fanhao, no_parse_links=True)
-def process_item(text, path, fanhao):
-    '''
-    process item page
-    '''
-    logger.debug(f'process item {fanhao}')
-    url = path
-    meta, tags = parse_item(text)
-    meta.update(url=url)
-    save(meta, tags)
-    print(f'item {fanhao} is processed')
+    return adapter.get_item_url(fanhao)
