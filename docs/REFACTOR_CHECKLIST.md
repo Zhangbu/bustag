@@ -12,7 +12,8 @@
 - [x] M3: 生产运行现代化（gunicorn + `/healthz`）
 - [ ] M4: 任务队列化（抓取/训练/推荐异步任务）
   - [x] Phase 1: 引入应用内任务队列 + 调度/手动拉取异步提交 + 任务状态查询
-  - [ ] Phase 2: 训练任务异步化 + 队列后端可替换（Redis/RQ）
+  - [x] Phase 2: 模型训练异步化 + 模型页任务状态展示
+  - [ ] Phase 3: 队列后端可替换（Redis/RQ，可选）
 - [ ] M5: 数据库迁移体系（migrations）
 - [ ] M6: FastAPI 双栈迁移
 
@@ -36,16 +37,18 @@
 - Docker 入口切换为 gunicorn：`docker/entry.sh`
 - 补充运行时环境变量示例：`.env.example`
 
-## M4 Phase 1 交付项
+## M4 交付项（当前实现为无中间件方案）
 
 - 新增轻量任务队列：`bustag/app/tasks.py`
 - 调度器下载任务异步提交：`bustag/app/schedule.py`
 - 手动拉取改为后台任务提交并返回任务ID：`/fetch`
+- 模型训练改为后台任务提交并返回任务ID：`/do-training`
 - 新增任务状态查询接口：`/task/<task_id>`
-- 任务与调度测试：`tests/test_tasks.py`、`tests/test_schedule_async.py`
+- 模型页新增训练任务状态展示：`bustag/app/views/model.tpl`
+- 任务与调度测试：`tests/test_tasks.py`、`tests/test_schedule_async.py`、`tests/test_model_async.py`
 
 ## 回滚策略
 
 1. 回滚 `bustag/app/schedule.py` 与 `bustag/app/tasks.py` 可恢复同步执行路径。
-2. 回滚 `bustag/app/index.py` 可移除任务状态接口与异步提示。
+2. 回滚 `bustag/app/index.py` 与 `bustag/app/views/model.tpl` 可移除任务状态接口与异步训练展示。
 3. 所有改动已集中在单一分支，支持整分支回退。

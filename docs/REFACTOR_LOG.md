@@ -54,3 +54,23 @@
   - `41 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to restore previous synchronous scheduler/fetch behavior.
+
+## Round 3
+- Time: 2026-04-09 16:03:50 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Refactored model training (`/do-training`) to submit background task instead of inline execution
+  - Added model page task context loading and task status display support
+  - Kept architecture as in-process queue (no Redis introduced)
+  - Added async model-training task unit test
+- Files:
+  - `bustag/app/index.py`
+  - `bustag/app/views/model.tpl`
+  - `tests/test_model_async.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `42 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to restore synchronous model-training trigger and previous model page behavior.

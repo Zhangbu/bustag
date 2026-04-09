@@ -20,7 +20,7 @@
         <form action="/do-training" method="get" class="form-inline">
           <label class="mr-2" for="model">模型</label>
           <select class="form-control mr-2" id="model" name="model">
-            % selected_name = selected_model if defined('selected_model') else (model_metadata['model_name'] if defined('model_metadata') and model_metadata else '')
+            % selected_name = selected_model if defined('selected_model') and selected_model else (model_metadata['model_name'] if defined('model_metadata') and model_metadata else '')
             % for option in model_options:
             <option value="{{option['name']}}" {{'selected' if option['name'] == selected_name else ''}}>{{option['label']}}</option>
             % end
@@ -28,11 +28,32 @@
           <button type="submit" class="btn btn-primary">开始训练</button>
         </form>
         </div>
+
+        % if defined('training_task_id') and training_task_id:
+        <div class="card-body border-top">
+          <h6>训练任务</h6>
+          <p class="mb-1">任务ID: <code>{{training_task_id}}</code></p>
+          % if training_task is None:
+          <p class="text-muted mb-0">任务状态未知，可能已过期。可访问 <code>/task/{{training_task_id}}</code> 查看详情。</p>
+          % else:
+          <p class="mb-1">状态: <strong>{{training_task['status']}}</strong></p>
+          % if training_task['status'] == 'failed' and training_task['error']:
+          <p class="text-danger mb-1">失败原因: {{training_task['error']}}</p>
+          % end
+          % if training_task['status'] in ['pending', 'running']:
+          <p class="text-muted mb-0">训练正在后台执行，刷新页面可查看最新状态。</p>
+          % elif training_task['status'] == 'success':
+          <p class="text-success mb-0">训练任务已完成，当前模型数据已刷新。</p>
+          % end
+          % end
+        </div>
+        % end
+
         <div class="card-header">
            <h6> 当前模型数据 </h6>
         </div>
         % if defined('error_msg') and error_msg is not None:
-        <p class="card-text text-danger">{{error_msg}} </a>
+        <p class="card-text text-danger">{{error_msg}}</p>
         % end
         % if model_scores is not None:
         <ul class="list-group list-group-flush">

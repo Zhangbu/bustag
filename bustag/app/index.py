@@ -9,6 +9,7 @@ import sys
 import traceback
 import uuid
 from multiprocessing import freeze_support
+from urllib.parse import quote
 
 import bottle
 from bottle import hook, redirect, request, response, route, run, static_file, template
@@ -16,6 +17,7 @@ from bottle import hook, redirect, request, response, route, run, static_file, t
 from bustag import __version__
 from bustag.app.local import add_local_fanhao, load_tags_db
 from bustag.app.schedule import add_download_job, fetch_data, get_task_info, start_scheduler
+from bustag.app.tasks import task_queue
 import bustag.model.classifier as clf
 from bustag.spider import db
 from bustag.spider.db import (
@@ -90,6 +92,40 @@ def require_login():
         if path.startswith(public_route):
             return False
     return True
+
+
+def _get_model_page_context(error_msg=None, selected_model=None):
+    model_metadata = None
+    model_scores = None
+    model_options = clf.list_models()
+    try:
+        _, model_scores, model_metadata = clf.load()
+    except FileNotFoundError:
+        model_scores = None
+
+    training_task_id = request.query.get('task_id')
+    training_task = get_task_info(training_task_id) if training_task_id else None
+
+    return {
+        'path': request.path,
+        'model_scores': model_scores,
+        'model_metadata': model_metadata,
+        'model_options': model_options,
+        'error_msg': error_msg,
+        'selected_model': selected_model,
+        'training_task_id': training_task_id,
+        'training_task': training_task,
+    }
+
+
+def _train_model_task(model_name: str):
+    """Background task body for model training."""
+    _, model_scores, model_metadata = clf.train(model_name=model_name)
+    return {
+        'model_name': model_name,
+        'model_scores': model_scores,
+        'model_metadata': model_metadata,
+    }
 
 
 @hook('before_request')
@@ -249,37 +285,23 @@ def correct(fanhao):
 @route('/model')
 def other_settings():
     """Show model training status and scores."""
-    model_metadata = None
-    model_options = clf.list_models()
-    try:
-        _, model_scores, model_metadata = clf.load()
-    except FileNotFoundError:
-        model_scores = None
-    return template('model', path=request.path, model_scores=model_scores, model_metadata=model_metadata, model_options=model_options)
+    context = _get_model_page_context()
+    return template('model', **context)
 
 
 @route('/do-training')
 def do_training():
-    """Trigger model training."""
-    error_msg = None
-    model_scores = None
-    model_metadata = None
+    """Submit model training task to background queue."""
     model_options = clf.list_models()
+    model_names = {option['name'] for option in model_options}
     model_name = request.query.get('model', clf.DEFAULT_MODEL_NAME)
-    try:
-        _, model_scores, model_metadata = clf.train(model_name=model_name)
-    except ValueError as ex:
-        logger.exception(ex)
-        error_msg = ' '.join(ex.args)
-    return template(
-        'model',
-        path=request.path,
-        model_scores=model_scores,
-        model_metadata=model_metadata,
-        model_options=model_options,
-        error_msg=error_msg,
-        selected_model=model_name,
-    )
+    if model_name not in model_names:
+        context = _get_model_page_context(error_msg=f'不支持的模型: {model_name}', selected_model=clf.DEFAULT_MODEL_NAME)
+        return template('model', **context)
+
+    task_id = task_queue.submit('model_training', _train_model_task, model_name)
+    logger.info('Submitted model training task %s with model=%s', task_id, model_name)
+    redirect(f'/model?task_id={quote(task_id)}')
 
 
 @route('/local_fanhao', method=['GET', 'POST'])
