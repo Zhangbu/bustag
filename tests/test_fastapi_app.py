@@ -25,7 +25,11 @@ def test_healthz(monkeypatch):
 
 def test_task_status_found(monkeypatch):
     client = _build_client(monkeypatch)
-    monkeypatch.setattr(fastapi_app, 'get_task_info', lambda task_id: {'id': task_id, 'status': 'success'})
+    monkeypatch.setattr(
+        fastapi_app,
+        'build_task_status_payload',
+        lambda task_id: (200, {'success': True, 'task': {'id': task_id, 'status': 'success'}}),
+    )
 
     resp = client.get('/task/abc123')
     assert resp.status_code == 200
@@ -37,7 +41,11 @@ def test_task_status_found(monkeypatch):
 
 def test_task_status_not_found(monkeypatch):
     client = _build_client(monkeypatch)
-    monkeypatch.setattr(fastapi_app, 'get_task_info', lambda _task_id: None)
+    monkeypatch.setattr(
+        fastapi_app,
+        'build_task_status_payload',
+        lambda task_id: (404, {'success': False, 'message': '任务不存在', 'task_id': task_id}),
+    )
 
     resp = client.get('/task/missing-id')
     assert resp.status_code == 404

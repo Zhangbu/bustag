@@ -15,6 +15,7 @@ import bottle
 from bottle import hook, redirect, request, response, route, run, static_file, template
 
 from bustag import __version__
+from bustag.app.api_service import build_healthz_payload, build_task_status_payload
 from bustag.app.local import add_local_fanhao, load_tags_db
 from bustag.app.schedule import add_download_job, fetch_data, get_task_info, start_scheduler
 from bustag.app.tasks import task_queue
@@ -151,17 +152,15 @@ def _auth_check():
 @route('/healthz')
 def healthz():
     """Liveness endpoint for container/runtime health checks."""
-    return {'status': 'ok', 'version': __version__}
+    return build_healthz_payload('bottle')
 
 
 @route('/task/<task_id>')
 def task_status(task_id):
     """Task status API for background jobs."""
-    task = get_task_info(task_id)
-    if task is None:
-        response.status = 404
-        return {'success': False, 'message': '任务不存在', 'task_id': task_id}
-    return {'success': True, 'task': task}
+    status_code, payload = build_task_status_payload(task_id)
+    response.status = status_code
+    return payload
 
 
 @route('/login', method=['GET', 'POST'])

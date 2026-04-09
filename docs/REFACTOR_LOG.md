@@ -196,3 +196,27 @@
   - `48 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to remove FastAPI dual-stack entry and restore Bottle-only CLI surface.
+
+## Round 9
+- Time: 2026-04-09 17:15:07 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added shared API service layer for dual-stack reuse (`build_healthz_payload`, `build_task_status_payload`)
+  - Refactored Bottle `/healthz` and `/task/<task_id>` routes to use shared service
+  - Refactored FastAPI `/healthz` and `/task/{task_id}` endpoints to use shared service
+  - Added shared service unit tests and adjusted FastAPI endpoint tests
+  - Updated M6 checklist to mark Phase 2 completed
+- Files:
+  - `bustag/app/api_service.py`
+  - `bustag/app/index.py`
+  - `bustag/app/fastapi_app.py`
+  - `tests/test_api_service.py`
+  - `tests/test_fastapi_app.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `51 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to restore duplicated API response logic in Bottle/FastAPI.

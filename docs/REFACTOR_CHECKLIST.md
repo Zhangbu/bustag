@@ -20,7 +20,7 @@
   - [x] Phase 3: 生产发布迁移流程文档化 + 迁移状态核对命令
 - [ ] M6: FastAPI 双栈迁移
   - [x] Phase 1: 新增 FastAPI 最小 API（/healthz、/task/{task_id}）+ CLI 启动命令
-  - [ ] Phase 2: 抽取共享 service 层，消除 Bottle/FastAPI 业务重复
+  - [x] Phase 2: 抽取共享 service 层，消除 Bottle/FastAPI 业务重复
   - [ ] Phase 3: 鉴权、错误模型、可观测性统一并评估默认入口切换
 
 ## M1 交付项
@@ -66,13 +66,14 @@
 - 迁移 runbook：`docs/MIGRATION_RUNBOOK.md`
 - 迁移测试：`tests/test_migrate.py`
 
-## M6 交付项（Phase 1）
+## M6 交付项（Phase 1-2）
 
 - FastAPI 最小入口：`bustag/app/fastapi_app.py`
 - 最小 API：`GET /healthz`、`GET /task/{task_id}`
 - CLI 启动命令：`python -m bustag.main serve-api`
 - 依赖补齐：`fastapi`、`uvicorn`
-- 测试覆盖：`tests/test_fastapi_app.py`、`tests/test_main.py`
+- 共享 API service：`bustag/app/api_service.py`
+- 测试覆盖：`tests/test_fastapi_app.py`、`tests/test_api_service.py`、`tests/test_main.py`
 
 ## 回滚策略
 
