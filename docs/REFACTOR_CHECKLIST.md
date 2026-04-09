@@ -18,10 +18,10 @@
   - [x] Phase 1: SQL migration runner + baseline migration + CLI/Makefile 接入
   - [x] Phase 2: 迁移前自动备份 + 失败自动回滚恢复 + 安全迁移脚本
   - [x] Phase 3: 生产发布迁移流程文档化 + 迁移状态核对命令
-- [ ] M6: FastAPI 双栈迁移
+- [x] M6: FastAPI 双栈迁移
   - [x] Phase 1: 新增 FastAPI 最小 API（/healthz、/task/{task_id}）+ CLI 启动命令
   - [x] Phase 2: 抽取共享 service 层，消除 Bottle/FastAPI 业务重复
-  - [ ] Phase 3: 鉴权、错误模型、可观测性统一并评估默认入口切换
+  - [x] Phase 3: 鉴权、错误模型、可观测性统一并评估默认入口切换
 
 ## M1 交付项
 
@@ -66,7 +66,7 @@
 - 迁移 runbook：`docs/MIGRATION_RUNBOOK.md`
 - 迁移测试：`tests/test_migrate.py`
 
-## M6 交付项（Phase 1-2）
+## M6 交付项（Phase 1-3）
 
 - FastAPI 最小入口：`bustag/app/fastapi_app.py`
 - 最小 API：`GET /healthz`、`GET /task/{task_id}`
@@ -80,3 +80,12 @@
 1. 回滚 `bustag/spider/migrate.py` 与 `migrations/sql/*` 可恢复到无迁移执行器状态。
 2. 回滚 `bustag/main.py`、`Makefile`、`scripts/migrate.sh` 可移除迁移命令和安全脚本入口。
 3. 所有改动已集中在单一分支，支持整分支回退。
+
+## M6 默认入口评估（2026-04-09）
+
+- 评估结论：当前默认入口继续保持 Bottle，FastAPI 作为并行 API 栈。
+- 原因：主站页面路由与模板仍主要依赖 Bottle，直接切默认入口风险较高。
+- 切换前置条件：
+  - 完成页面路由/鉴权中间件等能力在 FastAPI 侧的等价实现。
+  - 在预发环境完成请求量与错误率对比观测。
+  - 提供一键回退到 Bottle 默认入口的发布开关。

@@ -5,6 +5,7 @@ This module provides the web interface for the bustag application,
 including routes for browsing, tagging, and managing items.
 """
 import os
+import time
 import sys
 import traceback
 import uuid
@@ -15,7 +16,7 @@ import bottle
 from bottle import hook, redirect, request, response, route, run, static_file, template
 
 from bustag import __version__
-from bustag.app.api_service import build_healthz_payload, build_task_status_payload
+from bustag.app.api_service import build_healthz_payload, build_task_status_payload, generate_request_id
 from bustag.app.local import add_local_fanhao, load_tags_db
 from bustag.app.schedule import add_download_job, fetch_data, get_task_info, start_scheduler
 from bustag.app.tasks import task_queue
@@ -130,6 +131,14 @@ def _train_model_task(model_name: str):
 
 
 @hook('before_request')
+def _init_request_context():
+    """Initialize per-request context for API observability."""
+    request_id = request.get_header('X-Request-ID') or generate_request_id()
+    request.environ['bustag.request_id'] = request_id
+    request.environ['bustag.request_start'] = time.perf_counter()
+
+
+@hook('before_request')
 def _connect_db():
     """Connect to database before each request."""
     dbconn.connect(reuse_if_open=True)
@@ -138,6 +147,22 @@ def _connect_db():
 @hook('after_request')
 def _close_db():
     """Close database connection after each request."""
+    request_id = request.environ.get('bustag.request_id')
+    if request_id:
+        response.set_header('X-Request-ID', request_id)
+
+    start = request.environ.get('bustag.request_start')
+    if start and (request.path == '/healthz' or request.path.startswith('/task/')):
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "API bottle %s %s -> %s %.2fms rid=%s",
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+            request_id,
+        )
+
     if not dbconn.is_closed():
         dbconn.close()
 
@@ -152,13 +177,13 @@ def _auth_check():
 @route('/healthz')
 def healthz():
     """Liveness endpoint for container/runtime health checks."""
-    return build_healthz_payload('bottle')
+    return build_healthz_payload('bottle', request_id=request.environ.get('bustag.request_id'))
 
 
 @route('/task/<task_id>')
 def task_status(task_id):
     """Task status API for background jobs."""
-    status_code, payload = build_task_status_payload(task_id)
+    status_code, payload = build_task_status_payload(task_id, request_id=request.environ.get('bustag.request_id'))
     response.status = status_code
     return payload
 

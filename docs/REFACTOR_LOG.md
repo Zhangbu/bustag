@@ -220,3 +220,28 @@
   - `51 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to restore duplicated API response logic in Bottle/FastAPI.
+
+## Round 10
+- Time: 2026-04-09 17:24:08 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added shared API error model builder in service layer (`build_error_payload`)
+  - Added request ID generation and propagation in shared API payloads
+  - Added FastAPI middleware for request ID, response header, and API access log
+  - Added Bottle request hooks for request ID, response header, and API access log
+  - Kept existing API payload compatibility (`success`/`message`) while extending error structure
+  - Completed M6 Phase 3 and documented default-entry evaluation (keep Bottle as default for now)
+- Files:
+  - `bustag/app/api_service.py`
+  - `bustag/app/fastapi_app.py`
+  - `bustag/app/index.py`
+  - `tests/test_api_service.py`
+  - `tests/test_fastapi_app.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `52 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove API request-id/observability hooks and unified error payload extension.
