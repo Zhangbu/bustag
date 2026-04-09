@@ -146,3 +146,27 @@
   - `47 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to disable automatic backup/rollback safety features in migration flow.
+
+## Round 7
+- Time: 2026-04-09 16:48:36 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added migration status query API in migration module (`get_migration_status`)
+  - Added CLI status command: `migrate-status`
+  - Added Makefile target: `migrate-status`
+  - Added production migration runbook document
+  - Extended migration tests with status query coverage
+- Files:
+  - `bustag/spider/migrate.py`
+  - `bustag/main.py`
+  - `Makefile`
+  - `tests/test_migrate.py`
+  - `tests/test_main.py`
+  - `docs/MIGRATION_RUNBOOK.md`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `48 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove migration status command and runbook additions.

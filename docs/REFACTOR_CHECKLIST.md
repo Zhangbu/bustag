@@ -14,10 +14,10 @@
   - [x] Phase 1: 引入应用内任务队列 + 调度/手动拉取异步提交 + 任务状态查询
   - [x] Phase 2: 模型训练异步化 + 模型页任务状态展示
   - [x] Phase 3: 队列后端可替换抽象（默认 memory，无中间件依赖）
-- [ ] M5: 数据库迁移体系（migrations）
+- [x] M5: 数据库迁移体系（migrations）
   - [x] Phase 1: SQL migration runner + baseline migration + CLI/Makefile 接入
   - [x] Phase 2: 迁移前自动备份 + 失败自动回滚恢复 + 安全迁移脚本
-  - [ ] Phase 3: 生产发布迁移流程文档化
+  - [x] Phase 3: 生产发布迁移流程文档化 + 迁移状态核对命令
 - [ ] M6: FastAPI 双栈迁移
 
 ## M1 交付项
@@ -56,9 +56,11 @@
 - 迁移执行器：`bustag/spider/migrate.py`
 - 基线 SQL 迁移：`migrations/sql/0001_baseline_schema.sql`
 - CLI 命令：`python -m bustag.main migrate [--dry-run] [--backup/--no-backup]`
-- Makefile 命令：`migrate`、`migrate-dry-run`、`migrate-safe`
+- 状态命令：`python -m bustag.main migrate-status`
+- Makefile 命令：`migrate`、`migrate-dry-run`、`migrate-safe`、`migrate-status`
 - 安全迁移脚本：`scripts/migrate.sh`
 - 失败回滚能力：迁移失败自动从备份恢复
+- 迁移 runbook：`docs/MIGRATION_RUNBOOK.md`
 - 迁移测试：`tests/test_migrate.py`
 
 ## 回滚策略

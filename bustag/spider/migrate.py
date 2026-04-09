@@ -68,6 +68,31 @@ def _restore_backup(backup_path: Path, db_file: Path):
     logger.warning('Database restored from backup: %s', backup_path)
 
 
+def get_migration_status(
+    db_path: str | None = None,
+    migrations_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    db_file = Path(db_path or get_data_path('bus.db'))
+    migration_dir = Path(migrations_dir) if migrations_dir else _default_migrations_dir()
+    migration_dir.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(db_file)
+    try:
+        _ensure_migrations_table(conn)
+        applied = _load_applied_migrations(conn)
+        migrations = _discover_migrations(migration_dir)
+        pending = [m.name for m in migrations if m.name not in applied]
+        return {
+            'db_path': str(db_file.resolve()),
+            'migrations_dir': str(migration_dir.resolve()),
+            'total': len(migrations),
+            'applied': sorted(applied),
+            'pending': pending,
+        }
+    finally:
+        conn.close()
+
+
 def apply_sql_migrations(
     db_path: str | None = None,
     migrations_dir: str | Path | None = None,

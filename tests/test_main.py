@@ -22,3 +22,4 @@ def test_main_help():
     assert 'download' in result.output
     assert 'recommend' in result.output
     assert 'migrate' in result.output
+    assert 'migrate-status' in result.output

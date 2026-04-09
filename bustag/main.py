@@ -10,7 +10,7 @@ import click
 import bustag.model.classifier as clf
 from bustag.spider import db as spider_db
 from bustag.spider.crawler import async_download
-from bustag.spider.migrate import apply_sql_migrations
+from bustag.spider.migrate import apply_sql_migrations, get_migration_status
 from bustag.spider.sources import get_source
 from bustag.util import APP_CONFIG, init as init_app_config, logger
 
@@ -102,6 +102,25 @@ def migrate(dry_run, migrations_dir, backup, backup_dir):
                 click.echo(f"  + {name}")
 
 
+@click.command(name='migrate-status')
+@click.option('--migrations-dir', type=click.Path(file_okay=False, path_type=Path), help='自定义迁移目录')
+def migrate_status(migrations_dir):
+    """查看数据库迁移状态"""
+    result = get_migration_status(migrations_dir=migrations_dir)
+
+    click.echo(f"db: {result['db_path']}")
+    click.echo(f"migrations: {result['migrations_dir']}")
+    click.echo(f"total: {result['total']}")
+    click.echo(f"applied: {len(result['applied'])}")
+    if result['applied']:
+        for name in result['applied']:
+            click.echo(f"  + {name}")
+    click.echo(f"pending: {len(result['pending'])}")
+    if result['pending']:
+        for name in result['pending']:
+            click.echo(f"  - {name}")
+
+
 @click.group()
 def main():
     pass
@@ -110,6 +129,7 @@ def main():
 main.add_command(download)
 main.add_command(recommend)
 main.add_command(migrate)
+main.add_command(migrate_status)
 
 if __name__ == '__main__':
     main()

@@ -12,6 +12,9 @@ migrate:
 migrate-dry-run:
 	$(PYTHON3) -m bustag.main migrate --dry-run
 
+migrate-status:
+	$(PYTHON3) -m bustag.main migrate-status
+
 migrate-safe:
 	bash scripts/migrate.sh
 

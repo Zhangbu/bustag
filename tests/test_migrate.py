@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from bustag.spider.migrate import apply_sql_migrations
+from bustag.spider.migrate import apply_sql_migrations, get_migration_status
 
 
 def test_apply_sql_migrations_dry_run_and_apply(tmp_path: Path):
@@ -45,6 +45,30 @@ def test_apply_sql_migrations_dry_run_and_apply(tmp_path: Path):
     assert apply_again['applied'] == []
     assert apply_again['pending'] == []
     assert apply_again['backup_path'] is not None
+
+
+def test_get_migration_status(tmp_path: Path):
+    db_path = tmp_path / 'test.db'
+    migrations_dir = tmp_path / 'migrations'
+    migrations_dir.mkdir()
+
+    (migrations_dir / '0001_create_demo.sql').write_text(
+        'CREATE TABLE IF NOT EXISTS demo (id INTEGER PRIMARY KEY, name TEXT);',
+        encoding='utf-8',
+    )
+    (migrations_dir / '0002_create_demo2.sql').write_text(
+        'CREATE TABLE IF NOT EXISTS demo2 (id INTEGER PRIMARY KEY, name TEXT);',
+        encoding='utf-8',
+    )
+
+    before = get_migration_status(db_path=str(db_path), migrations_dir=migrations_dir)
+    assert before['pending'] == ['0001_create_demo.sql', '0002_create_demo2.sql']
+
+    apply_sql_migrations(db_path=str(db_path), migrations_dir=migrations_dir, dry_run=False, backup_before_migrate=False)
+
+    after = get_migration_status(db_path=str(db_path), migrations_dir=migrations_dir)
+    assert after['pending'] == []
+    assert after['applied'] == ['0001_create_demo.sql', '0002_create_demo2.sql']
 
 
 def test_migration_failure_restores_backup(tmp_path: Path):
