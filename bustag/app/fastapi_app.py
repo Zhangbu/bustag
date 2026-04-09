@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from bustag.app.api_service import (
+    build_error_payload,
     build_healthz_payload,
     build_task_status_payload,
     generate_request_id,
@@ -23,6 +24,13 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _error_response(status_code: int, message: str, code: str, request_id: str) -> JSONResponse:
+    payload = build_error_payload(message, code=code, request_id=request_id)
+    response = JSONResponse(status_code=status_code, content=payload)
+    response.headers['X-Request-ID'] = request_id
+    return response
+
+
 def create_fastapi_app(start_background_scheduler: bool = False) -> FastAPI:
     """Create FastAPI app while reusing existing runtime initialization."""
     initialize_runtime(start_background_scheduler=start_background_scheduler)
@@ -35,7 +43,19 @@ def create_fastapi_app(start_background_scheduler: bool = False) -> FastAPI:
         request.state.request_id = request_id
         start = time.perf_counter()
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.exception(
+                'API fastapi %s %s -> 500 %.2fms rid=%s',
+                request.method,
+                request.url.path,
+                duration_ms,
+                request_id,
+            )
+            return _error_response(500, '服务器内部错误', 'internal_error', request_id)
+
         response.headers['X-Request-ID'] = request_id
 
         duration_ms = (time.perf_counter() - start) * 1000

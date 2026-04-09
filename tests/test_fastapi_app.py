@@ -73,3 +73,22 @@ def test_task_status_not_found(monkeypatch):
         'request_id': 'rid-404',
         'error': {'code': 'task_not_found', 'message': '任务不存在'},
     }
+
+
+def test_internal_error_has_unified_payload(monkeypatch):
+    client = _build_client(monkeypatch)
+
+    def _raise_error(_task_id, request_id=None):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(fastapi_app, 'build_task_status_payload', _raise_error)
+
+    resp = client.get('/task/explode', headers={'X-Request-ID': 'rid-500'})
+    assert resp.status_code == 500
+    assert resp.headers['X-Request-ID'] == 'rid-500'
+    assert resp.json() == {
+        'success': False,
+        'message': '服务器内部错误',
+        'request_id': 'rid-500',
+        'error': {'code': 'internal_error', 'message': '服务器内部错误'},
+    }

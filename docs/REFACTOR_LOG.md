@@ -245,3 +245,24 @@
   - `52 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to remove API request-id/observability hooks and unified error payload extension.
+
+## Round 11
+- Time: 2026-04-09 17:28:25 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added FastAPI middleware exception fallback to avoid raw 500 responses
+  - Unified internal server error payload via shared API service (`internal_error`)
+  - Ensured error responses still include `X-Request-ID`
+  - Added FastAPI test coverage for unhandled-exception path
+  - Added M7 milestone and marked Phase 1 completed
+- Files:
+  - `bustag/app/fastapi_app.py`
+  - `tests/test_fastapi_app.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `52 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to restore previous FastAPI exception behavior.

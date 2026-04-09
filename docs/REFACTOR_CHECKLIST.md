@@ -22,6 +22,10 @@
   - [x] Phase 1: 新增 FastAPI 最小 API（/healthz、/task/{task_id}）+ CLI 启动命令
   - [x] Phase 2: 抽取共享 service 层，消除 Bottle/FastAPI 业务重复
   - [x] Phase 3: 鉴权、错误模型、可观测性统一并评估默认入口切换
+- [ ] M7: API 可靠性增强（灰度前）
+  - [x] Phase 1: FastAPI 异常兜底与统一 500 错误模型
+  - [ ] Phase 2: API 指标埋点与慢请求阈值告警
+  - [ ] Phase 3: 灰度开关与回滚演练脚本
 
 ## M1 交付项
 
@@ -89,3 +93,9 @@
   - 完成页面路由/鉴权中间件等能力在 FastAPI 侧的等价实现。
   - 在预发环境完成请求量与错误率对比观测。
   - 提供一键回退到 Bottle 默认入口的发布开关。
+
+## M7 交付项（Phase 1）
+
+- FastAPI 中间件异常兜底：统一返回 `internal_error` 错误结构
+- 异常响应保留请求链路 ID：`X-Request-ID`
+- FastAPI 异常路径测试：`tests/test_fastapi_app.py::test_internal_error_has_unified_payload`
