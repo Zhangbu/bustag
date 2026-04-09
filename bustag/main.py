@@ -69,12 +69,22 @@ def download(count):
 @click.command()
 @click.option('--dry-run', is_flag=True, help='只检查待执行迁移，不实际执行')
 @click.option('--migrations-dir', type=click.Path(file_okay=False, path_type=Path), help='自定义迁移目录')
-def migrate(dry_run, migrations_dir):
+@click.option('--backup/--no-backup', default=True, help='迁移前是否自动备份数据库')
+@click.option('--backup-dir', type=click.Path(file_okay=False, path_type=Path), help='数据库备份目录')
+def migrate(dry_run, migrations_dir, backup, backup_dir):
     """执行数据库 SQL 迁移"""
-    result = apply_sql_migrations(migrations_dir=migrations_dir, dry_run=dry_run)
+    result = apply_sql_migrations(
+        migrations_dir=migrations_dir,
+        dry_run=dry_run,
+        backup_before_migrate=backup,
+        backup_dir=backup_dir,
+    )
 
     click.echo(f"db: {result['db_path']}")
     click.echo(f"migrations: {result['migrations_dir']}")
+    click.echo(f"backup enabled: {result['backup_enabled']}")
+    if result['backup_path']:
+        click.echo(f"backup file: {result['backup_path']}")
 
     if dry_run:
         click.echo('dry-run mode')

@@ -1,6 +1,7 @@
 """SQLite SQL migration runner for bustag."""
 from __future__ import annotations
 
+import shutil
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,6 +14,10 @@ MIGRATIONS_TABLE = 'schema_migrations'
 
 def _default_migrations_dir() -> Path:
     return Path(__file__).resolve().parents[2] / 'migrations' / 'sql'
+
+
+def _default_backup_dir() -> Path:
+    return Path(get_data_path('backups'))
 
 
 def _ensure_migrations_table(conn: sqlite3.Connection):
@@ -46,15 +51,39 @@ def _record_migration(conn: sqlite3.Connection, name: str):
     )
 
 
+def _create_backup(db_file: Path, backup_dir: Path) -> Path | None:
+    if not db_file.exists():
+        return None
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')
+    backup_path = backup_dir / f'{db_file.stem}.{timestamp}.bak{db_file.suffix}'
+    shutil.copy2(db_file, backup_path)
+    logger.info('Database backup created: %s', backup_path)
+    return backup_path
+
+
+def _restore_backup(backup_path: Path, db_file: Path):
+    shutil.copy2(backup_path, db_file)
+    logger.warning('Database restored from backup: %s', backup_path)
+
+
 def apply_sql_migrations(
     db_path: str | None = None,
     migrations_dir: str | Path | None = None,
     dry_run: bool = False,
+    backup_before_migrate: bool = True,
+    backup_dir: str | Path | None = None,
 ) -> dict[str, Any]:
-    db_file = db_path or get_data_path('bus.db')
+    db_file = Path(db_path or get_data_path('bus.db'))
     migration_dir = Path(migrations_dir) if migrations_dir else _default_migrations_dir()
+    backup_root = Path(backup_dir) if backup_dir else _default_backup_dir()
 
     migration_dir.mkdir(parents=True, exist_ok=True)
+
+    backup_path: Path | None = None
+    if not dry_run and backup_before_migrate:
+        backup_path = _create_backup(db_file, backup_root)
 
     conn = sqlite3.connect(db_file)
     try:
@@ -75,12 +104,23 @@ def apply_sql_migrations(
                 newly_applied.append(migration_file.name)
 
         return {
-            'db_path': str(Path(db_file).resolve()),
+            'db_path': str(db_file.resolve()),
             'migrations_dir': str(migration_dir.resolve()),
             'dry_run': dry_run,
+            'backup_enabled': backup_before_migrate,
+            'backup_path': str(backup_path) if backup_path else None,
             'applied': newly_applied,
             'pending': [m.name for m in pending],
             'total': len(migrations),
         }
-    finally:
+    except Exception:
         conn.close()
+        if backup_path and backup_path.exists():
+            _restore_backup(backup_path, db_file)
+        raise
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass

@@ -12,6 +12,9 @@ migrate:
 migrate-dry-run:
 	$(PYTHON3) -m bustag.main migrate --dry-run
 
+migrate-safe:
+	bash scripts/migrate.sh
+
 build:
 	docker build -t  bustag-app-dev .
 	

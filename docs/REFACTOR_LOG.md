@@ -120,3 +120,29 @@
   - `46 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to remove migration framework and restore previous CLI behavior.
+
+## Round 6
+- Time: 2026-04-09 16:34:54 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added migration backup-before-apply support and backup metadata in result output
+  - Added automatic rollback restore when migration execution fails
+  - Added CLI options for migration safety (`--backup/--no-backup`, `--backup-dir`)
+  - Added safe migration helper script for WSL/conda (`scripts/migrate.sh`)
+  - Added Makefile target `migrate-safe`
+  - Improved backup filename uniqueness to microsecond precision
+  - Extended migration tests to validate rollback restoration on SQL failure
+- Files:
+  - `bustag/spider/migrate.py`
+  - `bustag/main.py`
+  - `scripts/migrate.sh`
+  - `Makefile`
+  - `tests/test_migrate.py`
+  - `.env.example`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `47 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to disable automatic backup/rollback safety features in migration flow.
