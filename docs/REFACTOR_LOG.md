@@ -170,3 +170,29 @@
   - `48 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to remove migration status command and runbook additions.
+
+## Round 8
+- Time: 2026-04-09 16:54:38 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added FastAPI dual-stack minimal app entry (`bustag/app/fastapi_app.py`)
+  - Exposed migration-first API endpoints in FastAPI: `/healthz` and `/task/{task_id}`
+  - Added CLI command `serve-api` to start FastAPI via uvicorn
+  - Updated dependency manifests with `fastapi` and `uvicorn`
+  - Added FastAPI API tests and extended CLI help assertion
+  - Updated refactor checklist with M6 Phase 1 completion status
+- Files:
+  - `bustag/app/fastapi_app.py`
+  - `bustag/main.py`
+  - `pyproject.toml`
+  - `requirements.txt`
+  - `tests/test_fastapi_app.py`
+  - `tests/test_main.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `48 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove FastAPI dual-stack entry and restore Bottle-only CLI surface.

@@ -121,6 +121,21 @@ def migrate_status(migrations_dir):
             click.echo(f"  - {name}")
 
 
+@click.command(name='serve-api')
+@click.option('--host', default='0.0.0.0', show_default=True, help='FastAPI 监听地址')
+@click.option('--port', default=8001, show_default=True, type=int, help='FastAPI 监听端口')
+@click.option('--reload', is_flag=True, help='开启 uvicorn 自动重载（开发环境）')
+@click.option('--start-background-scheduler/--no-start-background-scheduler', default=False, show_default=True)
+def serve_api(host, port, reload, start_background_scheduler):
+    """启动 FastAPI 双栈 API（迁移阶段使用）"""
+    import uvicorn
+
+    from bustag.app.fastapi_app import create_fastapi_app
+
+    app = create_fastapi_app(start_background_scheduler=start_background_scheduler)
+    uvicorn.run(app, host=host, port=port, reload=reload)
+
+
 @click.group()
 def main():
     pass
@@ -130,6 +145,7 @@ main.add_command(download)
 main.add_command(recommend)
 main.add_command(migrate)
 main.add_command(migrate_status)
+main.add_command(serve_api)
 
 if __name__ == '__main__':
     main()

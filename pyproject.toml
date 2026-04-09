@@ -21,12 +21,15 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Framework :: Bottle",
+    "Framework :: FastAPI",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 keywords = ["machine-learning", "recommendation", "web-scraping", "bottle"]
 
 dependencies = [
     "bottle>=0.13.2",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
     "peewee>=3.17.1",
     "aiohttp>=3.9.5",

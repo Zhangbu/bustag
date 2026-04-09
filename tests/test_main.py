@@ -23,3 +23,4 @@ def test_main_help():
     assert 'recommend' in result.output
     assert 'migrate' in result.output
     assert 'migrate-status' in result.output
+    assert 'serve-api' in result.output
