@@ -6,6 +6,12 @@ javbus:
 recommend:
 	$(PYTHON3) -m bustag.main recommend
 
+migrate:
+	$(PYTHON3) -m bustag.main migrate
+
+migrate-dry-run:
+	$(PYTHON3) -m bustag.main migrate --dry-run
+
 build:
 	docker build -t  bustag-app-dev .
 	

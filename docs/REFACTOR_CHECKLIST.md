@@ -15,6 +15,9 @@
   - [x] Phase 2: 模型训练异步化 + 模型页任务状态展示
   - [x] Phase 3: 队列后端可替换抽象（默认 memory，无中间件依赖）
 - [ ] M5: 数据库迁移体系（migrations）
+  - [x] Phase 1: SQL migration runner + baseline migration + CLI/Makefile 接入
+  - [ ] Phase 2: 迁移前自动备份与失败回滚脚本
+  - [ ] Phase 3: 生产发布迁移流程文档化
 - [ ] M6: FastAPI 双栈迁移
 
 ## M1 交付项
@@ -48,8 +51,16 @@
 - 任务队列后端抽象：`TaskBackend` + `create_task_queue*`（默认 `memory`，未知后端自动回退）
 - 任务与调度测试：`tests/test_tasks.py`、`tests/test_tasks_backend.py`、`tests/test_schedule_async.py`、`tests/test_model_async.py`
 
+## M5 Phase 1 交付项
+
+- 迁移执行器：`bustag/spider/migrate.py`
+- 基线 SQL 迁移：`migrations/sql/0001_baseline_schema.sql`
+- CLI 命令：`python -m bustag.main migrate [--dry-run]`
+- Makefile 命令：`migrate`、`migrate-dry-run`
+- 迁移测试：`tests/test_migrate.py`
+
 ## 回滚策略
 
-1. 回滚 `bustag/app/schedule.py` 与 `bustag/app/tasks.py` 可恢复同步执行路径。
-2. 回滚 `bustag/app/index.py` 与 `bustag/app/views/model.tpl` 可移除任务状态接口与异步训练展示。
+1. 回滚 `bustag/spider/migrate.py` 与 `migrations/sql/*` 可恢复到无迁移执行器状态。
+2. 回滚 `bustag/main.py` 与 `Makefile` 可移除迁移命令入口。
 3. 所有改动已集中在单一分支，支持整分支回退。

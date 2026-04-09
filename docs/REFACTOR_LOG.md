@@ -95,3 +95,28 @@
   - `45 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to return to fixed in-memory queue implementation without backend abstraction.
+
+## Round 5
+- Time: 2026-04-09 16:23:09 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added SQLite SQL migration runner with `schema_migrations` tracking
+  - Added baseline schema SQL migration file (`0001_baseline_schema.sql`)
+  - Added CLI migration command: `python -m bustag.main migrate [--dry-run]`
+  - Added Makefile migration helper targets
+  - Refined CLI startup to initialize DB lazily per command
+  - Added migration runner unit tests
+- Files:
+  - `bustag/spider/migrate.py`
+  - `migrations/sql/0001_baseline_schema.sql`
+  - `bustag/main.py`
+  - `Makefile`
+  - `tests/test_migrate.py`
+  - `tests/test_main.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `46 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove migration framework and restore previous CLI behavior.

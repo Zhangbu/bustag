@@ -3,17 +3,22 @@ entry point for command line
 '''
 
 import asyncio
+from pathlib import Path
 
 import click
 
 import bustag.model.classifier as clf
 from bustag.spider import db as spider_db
 from bustag.spider.crawler import async_download
+from bustag.spider.migrate import apply_sql_migrations
 from bustag.spider.sources import get_source
 from bustag.util import APP_CONFIG, init as init_app_config, logger
 
 init_app_config()
-spider_db.init()
+
+
+def _ensure_db_ready():
+    spider_db.init()
 
 
 @click.command()
@@ -21,6 +26,7 @@ def recommend():
     '''
     根据现有模型预测推荐数据
     '''
+    _ensure_db_ready()
     try:
         clf.recommend()
     except FileNotFoundError:
@@ -33,6 +39,8 @@ def download(count):
     """
     下载更新数据
     """
+    _ensure_db_ready()
+
     print('start download')
     if count is not None:
         APP_CONFIG['download.count'] = count
@@ -58,6 +66,32 @@ def download(count):
     )
 
 
+@click.command()
+@click.option('--dry-run', is_flag=True, help='只检查待执行迁移，不实际执行')
+@click.option('--migrations-dir', type=click.Path(file_okay=False, path_type=Path), help='自定义迁移目录')
+def migrate(dry_run, migrations_dir):
+    """执行数据库 SQL 迁移"""
+    result = apply_sql_migrations(migrations_dir=migrations_dir, dry_run=dry_run)
+
+    click.echo(f"db: {result['db_path']}")
+    click.echo(f"migrations: {result['migrations_dir']}")
+
+    if dry_run:
+        click.echo('dry-run mode')
+
+    click.echo(f"total: {result['total']}")
+    click.echo(f"pending: {len(result['pending'])}")
+    if result['pending']:
+        for name in result['pending']:
+            click.echo(f"  - {name}")
+
+    if not dry_run:
+        click.echo(f"applied: {len(result['applied'])}")
+        if result['applied']:
+            for name in result['applied']:
+                click.echo(f"  + {name}")
+
+
 @click.group()
 def main():
     pass
@@ -65,6 +99,7 @@ def main():
 
 main.add_command(download)
 main.add_command(recommend)
+main.add_command(migrate)
 
 if __name__ == '__main__':
     main()

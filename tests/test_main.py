@@ -21,3 +21,4 @@ def test_main_help():
     assert result.exit_code == 0
     assert 'download' in result.output
     assert 'recommend' in result.output
+    assert 'migrate' in result.output
