@@ -74,3 +74,24 @@
   - `42 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to restore synchronous model-training trigger and previous model page behavior.
+
+## Round 4
+- Time: 2026-04-09 16:10:31 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added task queue backend abstraction (`TaskBackend` protocol + factory)
+  - Kept default backend as in-process memory queue
+  - Added safe fallback behavior for unsupported backend config
+  - Added task backend env documentation (`BUSTAG_TASK_BACKEND`, `BUSTAG_TASK_WORKERS`)
+  - Added backend factory tests
+- Files:
+  - `bustag/app/tasks.py`
+  - `.env.example`
+  - `tests/test_tasks_backend.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `45 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to return to fixed in-memory queue implementation without backend abstraction.

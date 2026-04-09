@@ -10,10 +10,10 @@
 - [x] M1: 基线护栏（测试补齐、CI 门禁基础）
 - [x] M2: 启动生命周期显式化（`create_app` + 显式 init）
 - [x] M3: 生产运行现代化（gunicorn + `/healthz`）
-- [ ] M4: 任务队列化（抓取/训练/推荐异步任务）
+- [x] M4: 任务队列化（抓取/训练/推荐异步任务）
   - [x] Phase 1: 引入应用内任务队列 + 调度/手动拉取异步提交 + 任务状态查询
   - [x] Phase 2: 模型训练异步化 + 模型页任务状态展示
-  - [ ] Phase 3: 队列后端可替换（Redis/RQ，可选）
+  - [x] Phase 3: 队列后端可替换抽象（默认 memory，无中间件依赖）
 - [ ] M5: 数据库迁移体系（migrations）
 - [ ] M6: FastAPI 双栈迁移
 
@@ -45,7 +45,8 @@
 - 模型训练改为后台任务提交并返回任务ID：`/do-training`
 - 新增任务状态查询接口：`/task/<task_id>`
 - 模型页新增训练任务状态展示：`bustag/app/views/model.tpl`
-- 任务与调度测试：`tests/test_tasks.py`、`tests/test_schedule_async.py`、`tests/test_model_async.py`
+- 任务队列后端抽象：`TaskBackend` + `create_task_queue*`（默认 `memory`，未知后端自动回退）
+- 任务与调度测试：`tests/test_tasks.py`、`tests/test_tasks_backend.py`、`tests/test_schedule_async.py`、`tests/test_model_async.py`
 
 ## 回滚策略
 
