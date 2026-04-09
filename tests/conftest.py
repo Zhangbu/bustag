@@ -11,11 +11,13 @@ if str(ROOT) not in sys.path:
 os.environ.setdefault('TESTING', '1')
 os.environ.setdefault('BUSTAG_ADMIN_PASSWORD', 'test-admin-password')
 
+from bustag.spider import db as spider_db
 from bustag.util import init as init_app_config
 
 init_app_config(force=True)
+spider_db.init()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def start():
-    print("\n **** start test ****")
+    print('\n **** start test ****')

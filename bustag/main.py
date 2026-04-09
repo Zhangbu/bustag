@@ -1,17 +1,19 @@
 '''
-entry point for command line 
+entry point for command line
 '''
 
-import click
-from bustag.model.prepare import prepare_predict_data
-from bustag.spider.db import Item, ItemRate, RATE_TYPE
-import bustag.model.classifier as clf
-from bustag.spider.crawler import main as crawler_main, async_download
-from bustag.spider.sources import get_source
-from bustag.util import logger, APP_CONFIG, init as init_app_config
 import asyncio
 
+import click
+
+import bustag.model.classifier as clf
+from bustag.spider import db as spider_db
+from bustag.spider.crawler import async_download
+from bustag.spider.sources import get_source
+from bustag.util import APP_CONFIG, init as init_app_config, logger
+
 init_app_config()
+spider_db.init()
 
 
 @click.command()
@@ -26,7 +28,7 @@ def recommend():
 
 
 @click.command()
-@click.option("--count", help="下载数量", type=int)
+@click.option('--count', help='下载数量', type=int)
 def download(count):
     """
     下载更新数据
@@ -34,19 +36,17 @@ def download(count):
     print('start download')
     if count is not None:
         APP_CONFIG['download.count'] = count
-    
+
     root_url = APP_CONFIG.get('download.root_path')
     if not root_url:
-        logger.error("No root URL configured")
+        logger.error('No root URL configured')
         return
-    
+
     count_val = int(APP_CONFIG.get('download.count', 100))
-    
-    # Set base URL
+
     source = get_source()
     source.configure(root_url)
 
-    # Run crawler
     asyncio.run(
         async_download(
             [root_url],
@@ -66,5 +66,5 @@ def main():
 main.add_command(download)
 main.add_command(recommend)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -4,50 +4,82 @@ Bottle web application for bustag.
 This module provides the web interface for the bustag application,
 including routes for browsing, tagging, and managing items.
 """
-import threading
-import traceback
-import sys
 import os
-from multiprocessing import freeze_support
+import sys
+import traceback
 import uuid
+from multiprocessing import freeze_support
 
 import bottle
-from bottle import route, run, template, static_file, request, response, redirect, hook
+from bottle import hook, redirect, request, response, route, run, static_file, template
 
-from bustag.util import init as init_app_config
-
-init_app_config()
-
-# Setup template path before importing local modules
-dirname = os.path.dirname(os.path.realpath(__file__))
-if getattr(sys, 'frozen', False):
-    dirname = sys._MEIPASS
-print('dirname:' + dirname)
-bottle.TEMPLATE_PATH.insert(0, dirname + '/views/')
-
-# Import application modules (after template path setup)
 from bustag import __version__
-from bustag.util import logger, get_cwd, get_now_time, get_data_path, APP_CONFIG
-from bustag.spider.sources import get_source
-from bustag.spider.db import (
-    get_items, get_local_items, RATE_TYPE, RATE_VALUE,
-    ItemRate, Item, LocalItem, DBError, db as dbconn, User
-)
-
-# Secret key for session cookies
-SECRET_KEY = APP_CONFIG.get('auth.secret_key') or os.environ.get('BUSTAG_SECRET_KEY') or str(uuid.uuid4())
-
-# Routes that don't require authentication
-PUBLIC_ROUTES = ['/login', '/static']
-from bustag.spider import db
-from bustag.app.schedule import start_scheduler, add_download_job, fetch_data
 from bustag.app.local import add_local_fanhao, load_tags_db
+from bustag.app.schedule import add_download_job, fetch_data, start_scheduler
 import bustag.model.classifier as clf
+from bustag.spider import db
+from bustag.spider.db import (
+    DBError,
+    ItemRate,
+    LocalItem,
+    RATE_TYPE,
+    RATE_VALUE,
+    User,
+    db as dbconn,
+    get_items,
+    get_local_items,
+)
+from bustag.spider.sources import get_source
+from bustag.util import APP_CONFIG, get_data_path, init as init_app_config, logger
+
+APP_DIR = os.path.dirname(os.path.realpath(__file__))
+if getattr(sys, 'frozen', False):
+    APP_DIR = sys._MEIPASS
+
+PUBLIC_ROUTES = ['/login', '/static', '/healthz']
+_SECRET_KEY = None
+_RUNTIME_INITIALIZED = False
+_SCHEDULER_STARTED = False
+
+
+def _setup_template_path():
+    views_dir = os.path.join(APP_DIR, 'views')
+    if views_dir not in bottle.TEMPLATE_PATH:
+        bottle.TEMPLATE_PATH.insert(0, views_dir)
+
+
+def _get_secret_key() -> str:
+    global _SECRET_KEY
+    if _SECRET_KEY:
+        return _SECRET_KEY
+    _SECRET_KEY = APP_CONFIG.get('auth.secret_key') or os.environ.get('BUSTAG_SECRET_KEY') or str(uuid.uuid4())
+    return _SECRET_KEY
+
+
+def initialize_runtime(start_background_scheduler: bool = False):
+    """Initialize config/db and optionally scheduler in explicit app lifecycle."""
+    global _RUNTIME_INITIALIZED, _SCHEDULER_STARTED
+
+    if not _RUNTIME_INITIALIZED:
+        init_app_config()
+        db.init()
+        _setup_template_path()
+        _RUNTIME_INITIALIZED = True
+
+    if start_background_scheduler and not _SCHEDULER_STARTED:
+        start_scheduler()
+        _SCHEDULER_STARTED = True
+
+
+def create_app(start_background_scheduler: bool = False):
+    """Create and initialize bottle application."""
+    initialize_runtime(start_background_scheduler=start_background_scheduler)
+    return bottle.default_app()
 
 
 def is_logged_in():
     """Check if user is logged in."""
-    username = request.get_cookie('user', secret=SECRET_KEY)
+    username = request.get_cookie('user', secret=_get_secret_key())
     return username is not None
 
 
@@ -80,6 +112,12 @@ def _auth_check():
         redirect('/login')
 
 
+@route('/healthz')
+def healthz():
+    """Liveness endpoint for container/runtime health checks."""
+    return {'status': 'ok', 'version': __version__}
+
+
 @route('/login', method=['GET', 'POST'])
 def login():
     """Handle user login."""
@@ -89,7 +127,7 @@ def login():
         password = request.forms.get('password')
         user = User.authenticate(username, password)
         if user:
-            response.set_cookie('user', username, secret=SECRET_KEY, httponly=True, samesite='lax')
+            response.set_cookie('user', username, secret=_get_secret_key(), httponly=True, samesite='lax')
             logger.info(f'User logged in: {username}')
             redirect('/')
         else:
@@ -107,7 +145,7 @@ def logout():
 @route('/static/<filepath:path>')
 def send_static(filepath):
     """Serve static files."""
-    return static_file(filepath, root=dirname + '/static/')
+    return static_file(filepath, root=os.path.join(APP_DIR, 'static'))
 
 
 def _remove_extra_tags(item):
@@ -115,8 +153,8 @@ def _remove_extra_tags(item):
     limit = 10
     tags_dict = item.tags_dict
     tags = ['genre', 'star']
-    for t in tags:
-        tags_dict[t] = tags_dict[t][:limit]
+    for tag_type in tags:
+        tags_dict[tag_type] = tags_dict[tag_type][:limit]
 
 
 @route('/')
@@ -125,8 +163,7 @@ def index():
     rate_type = RATE_TYPE.SYSTEM_RATE.value
     rate_value = int(request.query.get('like', RATE_VALUE.LIKE.value))
     page = int(request.query.get('page', 1))
-    items, page_info = get_items(
-        rate_type=rate_type, rate_value=rate_value, page=page)
+    items, page_info = get_items(rate_type=rate_type, rate_value=rate_value, page=page)
     for item in items:
         _remove_extra_tags(item)
     today_update_count = db.get_today_update_count()
@@ -145,8 +182,7 @@ def tagit():
         rate_value = int(rate_value)
         rate_type = RATE_TYPE.USER_RATE
     page = int(request.query.get('page', 1))
-    items, page_info = get_items(
-        rate_type=rate_type, rate_value=rate_value, page=page)
+    items, page_info = get_items(rate_type=rate_type, rate_value=rate_value, page=page)
     for item in items:
         _remove_extra_tags(item)
     return template('tagit', items=items, page_info=page_info, like=rate_value, path=request.path)
@@ -155,6 +191,7 @@ def tagit():
 @route('/tag/<fanhao>', method='POST')
 def tag(fanhao):
     """Handle tagging action for an item."""
+    formid = None
     if request.POST.submit:
         formid = request.POST.formid
         item_rate = ItemRate.get_by_fanhao(fanhao)
@@ -178,6 +215,7 @@ def tag(fanhao):
 @route('/correct/<fanhao>', method='POST')
 def correct(fanhao):
     """Handle correction action for an item rating."""
+    formid = None
     if request.POST.submit:
         formid = request.POST.formid
         is_correct = int(request.POST.submit)
@@ -189,8 +227,7 @@ def correct(fanhao):
                 rate_value = 1 if rate_value == 0 else 0
                 item_rate.rate_value = rate_value
             item_rate.save()
-            logger.debug(
-                f'updated item fanhao: {fanhao}, {"and correct the rate_value" if not is_correct else ""}')
+            logger.debug(f'updated item fanhao: {fanhao}, {"and correct the rate_value" if not is_correct else ""}')
     page = int(request.query.get('page', 1))
     like = int(request.query.get('like', 1))
     url = f'/?page={page}&like={like}'
@@ -242,8 +279,7 @@ def update_local_fanhao():
     if request.POST.submit:
         fanhao_list = request.POST.fanhao
         tag_like = request.POST.tag_like == '1'
-        missing_urls, local_file_count, tag_file_count = add_local_fanhao(
-            fanhao_list, tag_like)
+        missing_urls, local_file_count, tag_file_count = add_local_fanhao(fanhao_list, tag_like)
         if len(missing_urls) > 0:
             add_download_job(missing_urls)
             msg = f'上传 {len(missing_urls)} 个番号, {local_file_count} 个本地文件'
@@ -302,15 +338,13 @@ def fetch():
     """手动拉取数据页面"""
     msg = ''
     errmsg = ''
-    result = None
-    
+
     if request.method == 'POST':
         try:
             start_page = int(request.forms.get('start_page', 1))
             end_page = int(request.forms.get('end_page', 1))
             max_count = int(request.forms.get('max_count', 100))
-            
-            # 参数验证
+
             if start_page < 1 or end_page < 1:
                 errmsg = '页码必须大于0'
             elif start_page > get_source().max_page or end_page > get_source().max_page:
@@ -327,28 +361,25 @@ def fetch():
                     errmsg = result['message']
         except ValueError:
             errmsg = '请输入有效的数字'
-    
+
     return template('fetch', path=request.path, msg=msg, errmsg=errmsg)
 
 
-app = bottle.default_app()
-
-
-def start_app():
+def start_app(host: str = '0.0.0.0', port: int = 8000, debug: bool = True, start_background_scheduler: bool = True):
     """Start the web application server."""
-    start_scheduler()
-    run(host='0.0.0.0', server='wsgiref', port=8000, debug=True)
+    app = create_app(start_background_scheduler=start_background_scheduler)
+    run(app=app, host=host, server='wsgiref', port=port, debug=debug)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         freeze_support()
-        print(f"Bustag server starting: version: {__version__}\n\n")
+        print(f'Bustag server starting: version: {__version__}\n\n')
         start_app()
-    except Exception as e:
+    except Exception:
         print('system error')
         traceback.print_exc()
     finally:
-        print("Press Enter to continue ...")
+        print('Press Enter to continue ...')
         input()
         os._exit(1)

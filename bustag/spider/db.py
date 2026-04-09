@@ -454,6 +454,3 @@ def is_initialized():
     return _initialized
 
 
-# Auto-initialize on module import for backward compatibility
-# In production, consider calling init() explicitly in your application startup
-init()
