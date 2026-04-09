@@ -15,7 +15,7 @@ from bottle import hook, redirect, request, response, route, run, static_file, t
 
 from bustag import __version__
 from bustag.app.local import add_local_fanhao, load_tags_db
-from bustag.app.schedule import add_download_job, fetch_data, start_scheduler
+from bustag.app.schedule import add_download_job, fetch_data, get_task_info, start_scheduler
 import bustag.model.classifier as clf
 from bustag.spider import db
 from bustag.spider.db import (
@@ -116,6 +116,16 @@ def _auth_check():
 def healthz():
     """Liveness endpoint for container/runtime health checks."""
     return {'status': 'ok', 'version': __version__}
+
+
+@route('/task/<task_id>')
+def task_status(task_id):
+    """Task status API for background jobs."""
+    task = get_task_info(task_id)
+    if task is None:
+        response.status = 404
+        return {'success': False, 'message': '任务不存在', 'task_id': task_id}
+    return {'success': True, 'task': task}
 
 
 @route('/login', method=['GET', 'POST'])
@@ -374,7 +384,7 @@ def start_app(host: str = '0.0.0.0', port: int = 8000, debug: bool = True, start
 if __name__ == '__main__':
     try:
         freeze_support()
-        print(f'Bustag server starting: version: {__version__}\n\n')
+        print(f'Bustag server starting: version: {__version__}\\n\\n')
         start_app()
     except Exception:
         print('system error')

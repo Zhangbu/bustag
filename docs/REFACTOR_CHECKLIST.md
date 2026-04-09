@@ -11,6 +11,8 @@
 - [x] M2: 启动生命周期显式化（`create_app` + 显式 init）
 - [x] M3: 生产运行现代化（gunicorn + `/healthz`）
 - [ ] M4: 任务队列化（抓取/训练/推荐异步任务）
+  - [x] Phase 1: 引入应用内任务队列 + 调度/手动拉取异步提交 + 任务状态查询
+  - [ ] Phase 2: 训练任务异步化 + 队列后端可替换（Redis/RQ）
 - [ ] M5: 数据库迁移体系（migrations）
 - [ ] M6: FastAPI 双栈迁移
 
@@ -34,8 +36,16 @@
 - Docker 入口切换为 gunicorn：`docker/entry.sh`
 - 补充运行时环境变量示例：`.env.example`
 
+## M4 Phase 1 交付项
+
+- 新增轻量任务队列：`bustag/app/tasks.py`
+- 调度器下载任务异步提交：`bustag/app/schedule.py`
+- 手动拉取改为后台任务提交并返回任务ID：`/fetch`
+- 新增任务状态查询接口：`/task/<task_id>`
+- 任务与调度测试：`tests/test_tasks.py`、`tests/test_schedule_async.py`
+
 ## 回滚策略
 
-1. 回滚 `docker/entry.sh` 至旧启动命令可恢复原运行方式。
-2. 回滚 `bustag/app/index.py` 与 `bustag/spider/db.py` 可恢复导入期初始化路径。
+1. 回滚 `bustag/app/schedule.py` 与 `bustag/app/tasks.py` 可恢复同步执行路径。
+2. 回滚 `bustag/app/index.py` 可移除任务状态接口与异步提示。
 3. 所有改动已集中在单一分支，支持整分支回退。

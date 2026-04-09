@@ -12,6 +12,7 @@ def test_healthz_route_registered():
     app = create_app(start_background_scheduler=False)
     rules = {route.rule for route in app.routes}
     assert '/healthz' in rules
+    assert '/task/<task_id>' in rules
 
 
 def test_db_init_is_idempotent():

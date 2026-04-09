@@ -28,3 +28,29 @@
   - `37 passed, 2 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to restore previous lifecycle/runtime behavior.
+
+## Round 2
+- Time: 2026-04-09 15:52:13 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added lightweight in-process background task queue with status tracking
+  - Refactored scheduler download path to submit background tasks instead of inline crawl/recommend execution
+  - Refactored manual fetch (`/fetch`) to submit async task and return task id in message
+  - Added task status endpoint: `/task/<task_id>`
+  - Updated fetch page hints to explain background execution
+  - Added tests for task queue and async schedule submission flow
+- Files:
+  - `bustag/app/tasks.py`
+  - `bustag/app/schedule.py`
+  - `bustag/app/index.py`
+  - `bustag/app/views/fetch.tpl`
+  - `tests/test_tasks.py`
+  - `tests/test_schedule_async.py`
+  - `tests/test_app_lifecycle.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `41 passed, 2 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to restore previous synchronous scheduler/fetch behavior.
