@@ -278,6 +278,12 @@ make crawler-once
 nohup make crawler-loop > crawler-loop.log 2>&1 &
 ```
 
+查看爬虫汇总日志：
+
+```bash
+make crawler-log-tail
+```
+
 导出线上 `bus.db` 快照：
 
 ```bash

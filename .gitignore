@@ -81,3 +81,6 @@ data/model/
 
 # Crawler export snapshots
 exports/
+
+# Crawler runtime logs
+logs/

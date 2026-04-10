@@ -5,6 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
 
 if [[ -f "${ENV_FILE}" ]]; then
+  if ! bash -n "${ENV_FILE}" >/dev/null 2>&1; then
+    echo "Invalid .env syntax: ${ENV_FILE}"
+    echo "Hint: quote values that contain spaces or parentheses."
+    exit 1
+  fi
   set -a
   # shellcheck disable=SC1090
   source "${ENV_FILE}"

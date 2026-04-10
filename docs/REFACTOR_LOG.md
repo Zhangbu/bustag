@@ -454,6 +454,35 @@
 - Rollback note:
   - Revert this commit to restore fixed-path conda behavior.
 
+## Round 20
+- Time: 2026-04-10 14:33:14 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added crawler run logging in `crawler_once.sh`:
+    - per-run detail logs (`crawler_*.log`)
+    - summary log (`crawler_summary.log`) with status/exit code/item delta
+  - Added log tail command: `make crawler-log-tail`
+  - Added crawler log env configuration: `BUSTAG_CRAWL_LOG_DIR`
+  - Added `.env` syntax guard for crawler scripts with clearer error hints
+  - Updated runbook/README for crawler log usage
+- Files:
+  - `scripts/crawler_once.sh`
+  - `scripts/crawler_loop.sh`
+  - `Makefile`
+  - `.env.example`
+  - `.gitignore`
+  - `docs/CRAWLER_ONLY_RUNBOOK.md`
+  - `README.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `bash -n scripts/crawler_once.sh scripts/crawler_loop.sh`
+  - `bash scripts/crawler_once.sh`（invalid `.env` guard check）
+- Test result:
+  - `syntax check passed`
+  - guard check output: `Invalid .env syntax ...`
+- Rollback note:
+  - Revert this commit to remove crawler log summary/detail outputs and env syntax guard.
+
 ## Round 18
 - Time: 2026-04-10 11:14:01 CST
 - Branch: `codex/crawler-only-mode`

@@ -63,3 +63,6 @@ crawler-export:
 
 crawler-import:
 	bash scripts/import_crawler_data.sh $(SNAPSHOT)
+
+crawler-log-tail:
+	tail -n 200 -f logs/crawler_summary.log

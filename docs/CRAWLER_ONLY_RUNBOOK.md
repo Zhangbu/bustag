@@ -25,6 +25,10 @@ cd /home/ubuntu/bustag
 make crawler-once
 ```
 
+日志位置：
+- 汇总日志：`logs/crawler_summary.log`
+- 单次详细日志：`logs/crawler_*.log`
+
 ## 2. 线上循环跑爬虫（后台长期运行）
 
 ```bash
@@ -39,6 +43,12 @@ nohup make crawler-loop > crawler-loop.log 2>&1 &
 
 ```bash
 pkill -f "scripts/crawler_loop.sh"
+```
+
+查看汇总日志：
+
+```bash
+make crawler-log-tail
 ```
 
 ## 3. 线上导出爬虫结果
