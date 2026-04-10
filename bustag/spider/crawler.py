@@ -85,6 +85,7 @@ class Crawler:
         max_count: int = 100,
         no_parse_links: bool = False,
         concurrency: int = 5,
+        progress_interval_seconds: int = 10,
         fetcher: Optional[Callable] = None,
         url_normalizer: Optional[Callable[[str], str]] = None,
     ):
@@ -92,6 +93,7 @@ class Crawler:
         self.max_count = max_count
         self.no_parse_links = no_parse_links
         self.concurrency = max(1, concurrency)
+        self.progress_interval_seconds = max(1, progress_interval_seconds)
         self.fetcher = fetcher
         self.url_normalizer = url_normalizer
         self.processed_count = 0
@@ -103,6 +105,7 @@ class Crawler:
         self.seen_urls: set[str] = set()
         self.urls_to_process: deque[str] = deque()
         self._lock = asyncio.Lock()
+        self._last_progress_log_at = 0.0
 
     def _get_full_url(self, path: str) -> str:
         """Convert path to full URL"""
@@ -251,12 +254,34 @@ class Crawler:
                         self.urls_to_process.append(link)
 
     async def _worker(self, session: aiohttp.ClientSession):
+        print("[crawler] worker start")
         while True:
+            await self._emit_progress()
             async with self._lock:
                 if not self.urls_to_process or self.processed_count >= self.max_count:
+                    print("[crawler] worker stop")
                     return
                 url = self.urls_to_process.popleft()
             await self._process_url(session, url)
+
+    async def _emit_progress(self, force: bool = False):
+        now = time.perf_counter()
+        async with self._lock:
+            if not force and now - self._last_progress_log_at < self.progress_interval_seconds:
+                return
+            self._last_progress_log_at = now
+            pending = len(self.urls_to_process)
+            seen = len(self.seen_urls)
+            processed = self.processed_count
+            fetch_ok = self.fetch_success_count
+            fetch_fail = self.fetch_failed_count
+            handler_error = self.handler_error_count
+
+        print(
+            "[crawler] progress "
+            f"pending={pending} seen={seen} processed={processed} "
+            f"fetch_ok={fetch_ok} fetch_fail={fetch_fail} handler_error={handler_error}"
+        )
 
     async def crawl(self, start_urls: list[str]):
         """Start crawling from given URLs"""
@@ -269,6 +294,7 @@ class Crawler:
         self.route_miss_count = 0
         self.handler_error_count = 0
         self.discovered_link_count = 0
+        self._last_progress_log_at = 0.0
 
         print(
             f"[crawler] crawl start roots={len(start_urls)} max_count={self.max_count} concurrency={self.concurrency}"
@@ -278,6 +304,7 @@ class Crawler:
             workers = [asyncio.create_task(self._worker(session)) for _ in range(self.concurrency)]
             await asyncio.gather(*workers)
 
+        await self._emit_progress(force=True)
         elapsed_ms = (time.perf_counter() - started) * 1000
         print(
             "[crawler] crawl done "
@@ -295,6 +322,8 @@ async def async_download(
     start_urls: list[str],
     max_count: int = 100,
     no_parse_links: bool = False,
+    concurrency: int = 5,
+    progress_interval_seconds: int = 10,
     router: Optional[Router] = None,
     fetcher: Optional[Callable] = None,
     url_normalizer: Optional[Callable[[str], str]] = None,
@@ -305,6 +334,8 @@ async def async_download(
         router,
         max_count=max_count,
         no_parse_links=no_parse_links,
+        concurrency=concurrency,
+        progress_interval_seconds=progress_interval_seconds,
         fetcher=fetcher,
         url_normalizer=url_normalizer,
     )

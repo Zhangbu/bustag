@@ -16,6 +16,7 @@
 ```bash
 BUSTAG_CONDA_ENV="bustag"
 BUSTAG_CONDA_BIN="/home/ubuntu/miniconda3/bin/conda"
+BUSTAG_CRAWL_CONCURRENCY=3
 ```
 
 ## 1. 线上仅跑一次爬虫
@@ -28,6 +29,7 @@ make crawler-once
 日志位置：
 - 汇总日志：`logs/crawler_summary.log`
 - 单次详细日志：`logs/crawler_*.log`（包含抓取 URL、状态码、处理成功/失败等过程信息）
+- 循环打点日志：`crawler-loop.log`（每轮 start/end、SUCCESS/FAILED）
 
 ## 2. 线上循环跑爬虫（后台长期运行）
 

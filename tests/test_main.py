@@ -112,12 +112,13 @@ def test_download_uses_source_seed_urls(monkeypatch):
     monkeypatch.setattr(main_module, '_ensure_db_ready', lambda: None)
     monkeypatch.setattr(main_module, 'get_source', lambda: dummy_source)
 
-    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None):
+    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None, concurrency=None):
         called['start_urls'] = start_urls
         called['count'] = count
         called['router'] = router
         called['fetcher'] = fetcher
         called['url_normalizer'] = url_normalizer
+        called['concurrency'] = concurrency
 
     monkeypatch.setattr(main_module, 'async_download', fake_async_download)
 
@@ -125,6 +126,7 @@ def test_download_uses_source_seed_urls(monkeypatch):
     assert result.exit_code == 0
     assert called['start_urls'] == ['https://missav.ai/en', 'https://missav.ai/en/new']
     assert called['count'] == 100
+    assert called['concurrency'] == 3
 
 
 def test_download_fallback_to_root_when_seed_empty(monkeypatch):
@@ -154,9 +156,10 @@ def test_download_fallback_to_root_when_seed_empty(monkeypatch):
     monkeypatch.setattr(main_module, '_ensure_db_ready', lambda: None)
     monkeypatch.setattr(main_module, 'get_source', lambda: dummy_source)
 
-    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None):
+    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None, concurrency=None):
         called['start_urls'] = start_urls
         called['count'] = count
+        called['concurrency'] = concurrency
 
     monkeypatch.setattr(main_module, 'async_download', fake_async_download)
 
@@ -164,3 +167,4 @@ def test_download_fallback_to_root_when_seed_empty(monkeypatch):
     assert result.exit_code == 0
     assert called['start_urls'] == [root_url]
     assert called['count'] == 100
+    assert called['concurrency'] == 3

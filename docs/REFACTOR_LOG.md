@@ -524,6 +524,38 @@
 - Rollback note:
   - Revert this commit to restore previous root-url-only download seeding behavior.
 
+## Round 23
+- Time: 2026-04-10 15:20:00 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added configurable crawler concurrency control (`download.concurrency`, env `BUSTAG_CRAWL_CONCURRENCY`)
+  - Added crawler process trace and progress heartbeat logs in core crawler:
+    - per-URL fetch start/ok/fail
+    - periodic progress snapshots (pending/seen/processed/failures)
+    - worker start/stop and crawl summary metrics
+  - Added loop cycle checkpoints in `crawler_loop.sh` (cycle start/end + SUCCESS/FAILED)
+  - Propagated concurrency setting into CLI download and scheduler async wrapper
+  - Updated env template and docs for concurrency and loop logs
+  - Added test coverage for scheduler concurrency propagation and updated download tests
+- Files:
+  - `bustag/spider/crawler.py`
+  - `bustag/main.py`
+  - `bustag/app/schedule.py`
+  - `bustag/util.py`
+  - `scripts/crawler_loop.sh`
+  - `.env.example`
+  - `README.md`
+  - `docs/CRAWLER_ONLY_RUNBOOK.md`
+  - `tests/test_main.py`
+  - `tests/test_schedule_async.py`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s tests/test_main.py::test_download_uses_source_seed_urls tests/test_main.py::test_download_fallback_to_root_when_seed_empty tests/test_schedule_async.py tests/test_spider.py`
+- Test result:
+  - `10 passed, 1 skipped`
+- Rollback note:
+  - Revert this commit to disable crawler heartbeat/process trace and return to fixed/default concurrency behavior.
+
 ## Round 18
 - Time: 2026-04-10 11:14:01 CST
 - Branch: `codex/crawler-only-mode`

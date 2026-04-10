@@ -16,7 +16,8 @@ DEFAULT_CONFIG = {
     'download': {
         'source': 'missav',
         'count': 100,
-        'interval': 3600
+        'interval': 3600,
+        'concurrency': 3,
     },
     'missav': {
         'language': 'en',
@@ -122,6 +123,9 @@ def load_config():
     env_missav_probe_url = os.environ.get('BUSTAG_MISSAV_PROBE_URL')
     if env_missav_probe_url is not None:
         APP_CONFIG['missav.probe_url'] = env_missav_probe_url
+    env_crawl_concurrency = os.environ.get('BUSTAG_CRAWL_CONCURRENCY')
+    if env_crawl_concurrency is not None:
+        APP_CONFIG['download.concurrency'] = env_crawl_concurrency
     logger.debug(APP_CONFIG)
     return APP_CONFIG
 

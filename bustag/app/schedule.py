@@ -17,6 +17,10 @@ async def async_download_wrapper(urls: list, count: int, no_parse_links: bool = 
     """Async wrapper for download"""
     source = get_source()
     router = source.router
+    try:
+        concurrency = max(1, int(APP_CONFIG.get('download.concurrency', 3)))
+    except (TypeError, ValueError):
+        concurrency = 3
     if urls:
         router.set_base_url(urls[0])
     await async_download(
@@ -26,6 +30,7 @@ async def async_download_wrapper(urls: list, count: int, no_parse_links: bool = 
         router=router,
         fetcher=source.fetch,
         url_normalizer=source.normalize_url,
+        concurrency=concurrency,
     )
 
 

@@ -21,6 +21,14 @@ def _ensure_db_ready():
     spider_db.init()
 
 
+def _to_positive_int(value, default: int) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, number)
+
+
 @click.command()
 def recommend():
     '''
@@ -51,12 +59,14 @@ def download(count):
         return
 
     count_val = int(APP_CONFIG.get('download.count', 100))
+    concurrency = _to_positive_int(APP_CONFIG.get('download.concurrency', 3), 3)
 
     source = get_source()
     source.configure(root_url)
     seed_urls = source.build_page_urls(1, 1)
     if not seed_urls:
         seed_urls = [root_url]
+    print(f"download seeds={len(seed_urls)} concurrency={concurrency}")
 
     asyncio.run(
         async_download(
@@ -65,6 +75,7 @@ def download(count):
             router=source.router,
             fetcher=source.fetch,
             url_normalizer=source.normalize_url,
+            concurrency=concurrency,
         )
     )
 

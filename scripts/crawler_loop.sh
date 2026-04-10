@@ -35,7 +35,18 @@ fi
 trap 'echo "[crawler-loop] stop $(date '\''+%Y-%m-%d %H:%M:%S %Z'\'')"; exit 0' INT TERM
 
 echo "[crawler-loop] started interval=${INTERVAL_SECONDS}s lock=${LOCK_FILE}"
+cycle=0
 while true; do
-  bash scripts/crawler_once.sh || true
+  cycle=$((cycle + 1))
+  cycle_start="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+  echo "[crawler-loop] cycle=${cycle} start ${cycle_start}"
+  if bash scripts/crawler_once.sh; then
+    echo "[crawler-loop] cycle=${cycle} result=SUCCESS"
+  else
+    rc=$?
+    echo "[crawler-loop] cycle=${cycle} result=FAILED exit=${rc}"
+  fi
+  cycle_end="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+  echo "[crawler-loop] cycle=${cycle} end   ${cycle_end}"
   sleep "${INTERVAL_SECONDS}"
 done

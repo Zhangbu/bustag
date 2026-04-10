@@ -278,6 +278,12 @@ make crawler-once
 nohup make crawler-loop > crawler-loop.log 2>&1 &
 ```
 
+并发可通过环境变量调整（默认 3）：
+
+```bash
+export BUSTAG_CRAWL_CONCURRENCY=3
+```
+
 查看爬虫汇总日志：
 
 ```bash

@@ -13,6 +13,19 @@ class _DummySource:
     def build_page_urls(self, start_page, end_page):
         return [f'https://example.com/page/{page}' for page in range(start_page, end_page + 1)]
 
+    @property
+    def router(self):
+        class _Router:
+            def set_base_url(self, _):
+                return None
+        return _Router()
+
+    fetch = None
+
+    @staticmethod
+    def normalize_url(url):
+        return url
+
 
 def test_fetch_data_submit_task(monkeypatch):
     monkeypatch.setitem(schedule.APP_CONFIG, 'download.root_path', 'https://example.com')
@@ -56,3 +69,25 @@ def test_download_submit_task(monkeypatch):
     assert submitted['task_name'] == 'scheduled_download'
     assert submitted['count'] == 100
     assert submitted['urls'] == ['https://example.com/page/1']
+
+
+def test_async_download_wrapper_uses_configured_concurrency(monkeypatch):
+    monkeypatch.setitem(schedule.APP_CONFIG, 'download.concurrency', '2')
+    monkeypatch.setattr(schedule, 'get_source', lambda: _DummySource())
+
+    captured = {}
+
+    async def fake_async_download(urls, count, no_parse_links=False, **kwargs):
+        captured['urls'] = urls
+        captured['count'] = count
+        captured['no_parse_links'] = no_parse_links
+        captured['concurrency'] = kwargs.get('concurrency')
+
+    monkeypatch.setattr(schedule, 'async_download', fake_async_download)
+
+    import asyncio
+    asyncio.run(schedule.async_download_wrapper(['https://example.com/page/1'], 10, False))
+
+    assert captured['urls'] == ['https://example.com/page/1']
+    assert captured['count'] == 10
+    assert captured['concurrency'] == 2
