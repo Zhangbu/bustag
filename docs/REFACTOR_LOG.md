@@ -341,3 +341,39 @@
   - `59 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to remove pre-release automation and keep manual switch checks.
+
+## Round 15
+- Time: 2026-04-10 10:29:26 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Completed M8 Phase 2 release-gate integration with executable pipeline command (`make web-release-gate`)
+  - Added unified `serve-web` CLI for Bottle/FastAPI startup entry, used by rollout/gate scripts
+  - Hardened pre-release scripts with request timeout and clearer JSON/error diagnostics
+  - Fixed Bottle `/task/<task_id>` auth interception by exposing `/task` as public API route
+  - Made gate runtime strategy low-dependency:
+    - Bottle: live HTTP startup + contract check
+    - FastAPI: in-process contract check when dependency exists
+    - Added strict switch `BUSTAG_GATE_ALLOW_SKIP_MISSING_FASTAPI` for CI policy control
+  - Updated rollout/checklist/env docs for gate variables and conda execution behavior
+- Files:
+  - `scripts/release_web_gate.sh`
+  - `scripts/pre_release_web_check.sh`
+  - `scripts/web_stack_drill.sh`
+  - `scripts/start.sh`
+  - `bustag/main.py`
+  - `bustag/app/index.py`
+  - `tests/test_main.py`
+  - `Makefile`
+  - `.env.example`
+  - `.gitignore`
+  - `docs/WEB_STACK_ROLLOUT.md`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+  - `make web-release-gate`
+- Test result:
+  - `61 passed, 3 skipped, 1 warning`
+  - `web-release-gate PASS (bottle contract passed; fastapi skipped due missing dependency with explicit gate log)`
+- Rollback note:
+  - Revert this commit to restore previous gate implementation and auth behavior for `/task`.

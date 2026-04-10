@@ -136,6 +136,49 @@ def serve_api(host, port, reload, start_background_scheduler):
     uvicorn.run(app, host=host, port=port, reload=reload)
 
 
+def _serve_bottle_web(host: str, port: int, start_background_scheduler: bool):
+    from bustag.app.index import start_app
+
+    start_app(
+        host=host,
+        port=port,
+        debug=False,
+        start_background_scheduler=start_background_scheduler,
+    )
+
+
+def _serve_fastapi_web(host: str, port: int, reload: bool, start_background_scheduler: bool):
+    import uvicorn
+
+    from bustag.app.fastapi_app import create_fastapi_app
+
+    app = create_fastapi_app(start_background_scheduler=start_background_scheduler)
+    uvicorn.run(app, host=host, port=port, reload=reload)
+
+
+@click.command(name='serve-web')
+@click.option('--stack', type=click.Choice(['bottle', 'fastapi']), default='bottle', show_default=True, help='Web 栈类型')
+@click.option('--host', default='127.0.0.1', show_default=True, help='监听地址')
+@click.option('--port', default=8000, show_default=True, type=int, help='监听端口')
+@click.option('--reload', is_flag=True, help='仅 fastapi 栈支持自动重载')
+@click.option('--start-background-scheduler/--no-start-background-scheduler', default=False, show_default=True)
+def serve_web(stack, host, port, reload, start_background_scheduler):
+    """统一启动 Bottle/FastAPI Web 服务（发布门禁与本地演练）"""
+    if stack == 'fastapi':
+        _serve_fastapi_web(
+            host=host,
+            port=port,
+            reload=reload,
+            start_background_scheduler=start_background_scheduler,
+        )
+        return
+    _serve_bottle_web(
+        host=host,
+        port=port,
+        start_background_scheduler=start_background_scheduler,
+    )
+
+
 @click.group()
 def main():
     pass
@@ -146,6 +189,7 @@ main.add_command(recommend)
 main.add_command(migrate)
 main.add_command(migrate_status)
 main.add_command(serve_api)
+main.add_command(serve_web)
 
 if __name__ == '__main__':
     main()

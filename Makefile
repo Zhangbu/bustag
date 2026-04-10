@@ -45,3 +45,6 @@ web-precheck-fastapi:
 
 web-precheck-bottle:
 	bash scripts/pre_release_web_check.sh bottle
+
+web-release-gate:
+	bash scripts/start.sh bash scripts/release_web_gate.sh

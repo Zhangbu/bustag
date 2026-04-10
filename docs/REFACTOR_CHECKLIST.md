@@ -28,7 +28,7 @@
   - [x] Phase 3: 灰度开关与回滚演练脚本
 - [ ] M8: 默认切换发布治理
   - [x] Phase 1: 预发验收脚本（接口契约自动检查）
-  - [ ] Phase 2: 发布流水线门禁集成
+  - [x] Phase 2: 发布流水线门禁集成
 
 ## M1 交付项
 
@@ -124,3 +124,10 @@
 - 验收内容：`/healthz` 与 `/task/{missing}` 契约、状态码、`X-Request-ID`
 - 演练命令：`make web-precheck-fastapi`、`make web-precheck-bottle`
 - 切换 runbook：`docs/WEB_STACK_ROLLOUT.md`
+
+## M8 交付项（Phase 2）
+
+- 发布流水线门禁脚本：`scripts/release_web_gate.sh`
+- 门禁命令：`make web-release-gate`
+- 双栈自动验收：Bottle 通过 `serve-web` 真实启动验收，FastAPI 通过进程内契约验收（`fastapi.testclient`）
+- CI 可配置项：`BUSTAG_GATE_HOST`、`BUSTAG_GATE_PORT`、`BUSTAG_GATE_WAIT_SECONDS`、`BUSTAG_GATE_STACKS`、`BUSTAG_GATE_ALLOW_SKIP_MISSING_FASTAPI`

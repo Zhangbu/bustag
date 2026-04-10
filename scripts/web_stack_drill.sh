@@ -25,7 +25,7 @@ echo "[drill] target stack: ${TARGET_STACK}"
 echo "[drill] health url: ${HEALTH_URL}"
 echo "[drill] request id: ${RID}"
 
-BODY=$(curl -fsS -H "X-Request-ID: ${RID}" "${HEALTH_URL}")
+BODY=$(curl -fsS --connect-timeout 2 --max-time 8 -H "X-Request-ID: ${RID}" "${HEALTH_URL}")
 
 python3 - <<'PY' "${BODY}" "${TARGET_STACK}" "${RID}"
 import json

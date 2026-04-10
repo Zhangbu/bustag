@@ -34,8 +34,8 @@ TASK_BODY="${TMP_DIR}/task.body"
 
 echo "[precheck] stack=${TARGET_STACK} base_url=${BASE_URL} rid=${RID}"
 
-HEALTH_CODE=$(curl -sS -o "${HEALTH_BODY}" -D "${HEALTH_HEADERS}" -w "%{http_code}" -H "X-Request-ID: ${RID}" "${HEALTH_URL}")
-TASK_CODE=$(curl -sS -o "${TASK_BODY}" -D "${TASK_HEADERS}" -w "%{http_code}" -H "X-Request-ID: ${RID}" "${TASK_URL}")
+HEALTH_CODE=$(curl -sS --connect-timeout 2 --max-time 8 -o "${HEALTH_BODY}" -D "${HEALTH_HEADERS}" -w "%{http_code}" -H "X-Request-ID: ${RID}" "${HEALTH_URL}")
+TASK_CODE=$(curl -sS --connect-timeout 2 --max-time 8 -o "${TASK_BODY}" -D "${TASK_HEADERS}" -w "%{http_code}" -H "X-Request-ID: ${RID}" "${TASK_URL}")
 
 python3 - <<'PY' \
   "${TARGET_STACK}" "${RID}" \
@@ -67,7 +67,13 @@ def parse_headers(path: Path) -> dict[str, str]:
 
 
 health_headers = parse_headers(health_headers_path)
-health_payload = json.loads(health_body_path.read_text(encoding='utf-8'))
+health_raw = health_body_path.read_text(encoding='utf-8')
+if not health_raw.strip():
+    raise SystemExit(f"health response body is empty, status={health_code}")
+try:
+    health_payload = json.loads(health_raw)
+except json.JSONDecodeError as exc:
+    raise SystemExit(f"health response is not valid json: {health_raw[:200]}") from exc
 
 if health_code != 200:
     raise SystemExit(f"health status code expected 200, got {health_code}, body={health_payload}")
@@ -82,7 +88,13 @@ if health_headers.get('x-request-id') != rid:
 
 
 task_headers = parse_headers(task_headers_path)
-task_payload = json.loads(task_body_path.read_text(encoding='utf-8'))
+task_raw = task_body_path.read_text(encoding='utf-8')
+if not task_raw.strip():
+    raise SystemExit(f"task response body is empty, status={task_code}")
+try:
+    task_payload = json.loads(task_raw)
+except json.JSONDecodeError as exc:
+    raise SystemExit(f"task response is not valid json: {task_raw[:200]}") from exc
 
 if task_code != 404:
     raise SystemExit(f"task missing status code expected 404, got {task_code}, body={task_payload}")

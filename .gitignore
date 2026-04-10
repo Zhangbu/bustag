@@ -75,3 +75,6 @@ data/model/
 
 # Local runtime secrets
 .env
+
+# Codex local marker
+.codex

@@ -48,7 +48,7 @@ APP_DIR = os.path.dirname(os.path.realpath(__file__))
 if getattr(sys, 'frozen', False):
     APP_DIR = sys._MEIPASS
 
-PUBLIC_ROUTES = ['/login', '/static', '/healthz']
+PUBLIC_ROUTES = ['/login', '/static', '/healthz', '/task']
 _SECRET_KEY = None
 _RUNTIME_INITIALIZED = False
 _SCHEDULER_STARTED = False
