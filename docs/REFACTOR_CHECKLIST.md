@@ -139,3 +139,10 @@
 - 依赖声明补齐：`curl_cffi`（`pyproject.toml`、`requirements.txt`）
 - Source 懒加载降级：MissAV 依赖缺失不影响 `bus` 运行
 - 探针命令：`make missav-probe`（`scripts/missav_probe.sh`）
+
+## Crawler-Only（专项）
+
+- 线上仅爬虫运行脚本：`scripts/crawler_once.sh`、`scripts/crawler_loop.sh`
+- 数据快照导出/导入脚本：`scripts/export_crawler_data.sh`、`scripts/import_crawler_data.sh`
+- 命令入口：`make crawler-once`、`make crawler-loop`、`make crawler-export`、`make crawler-import`
+- 运行文档：`docs/CRAWLER_ONLY_RUNBOOK.md`

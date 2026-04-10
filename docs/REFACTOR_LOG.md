@@ -433,3 +433,32 @@
   - `11 passed`
 - Rollback note:
   - Revert this commit to restore previous env override behavior (empty env will no longer override).
+
+## Round 18
+- Time: 2026-04-10 11:14:01 CST
+- Branch: `codex/crawler-only-mode`
+- Scope:
+  - Added crawler-only runtime scripts (without web frontend): one-shot and loop modes
+  - Added crawler result snapshot export/import scripts for cross-machine sync
+  - Added Makefile commands for crawler-only ops
+  - Added crawler-only runbook with server->local sync flow
+  - Updated env example and README for crawler-only operations
+- Files:
+  - `scripts/crawler_once.sh`
+  - `scripts/crawler_loop.sh`
+  - `scripts/export_crawler_data.sh`
+  - `scripts/import_crawler_data.sh`
+  - `docs/CRAWLER_ONLY_RUNBOOK.md`
+  - `Makefile`
+  - `.env.example`
+  - `.gitignore`
+  - `README.md`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `bash -n scripts/crawler_once.sh scripts/crawler_loop.sh scripts/export_crawler_data.sh scripts/import_crawler_data.sh`
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s tests/test_util.py tests/test_spider.py tests/test_missav.py`
+- Test result:
+  - `16 passed, 1 skipped`
+- Rollback note:
+  - Revert this commit to remove crawler-only scripts and restore previous workflow.

@@ -264,6 +264,34 @@ bash scripts/start.sh
 make start-env
 ```
 
+### Crawler-Only（不启动前端）
+
+只运行爬虫：
+
+```bash
+make crawler-once
+```
+
+后台循环运行：
+
+```bash
+nohup make crawler-loop > crawler-loop.log 2>&1 &
+```
+
+导出线上 `bus.db` 快照：
+
+```bash
+make crawler-export
+```
+
+本地导入快照：
+
+```bash
+make crawler-import SNAPSHOT=/absolute/path/to/busdb_*.db
+```
+
+详见 `docs/CRAWLER_ONLY_RUNBOOK.md`。
+
 - **bus.db** - 数据库文件(可选)
 - **model 目录** - 系统训练生成的模型
 
