@@ -51,3 +51,15 @@ web-release-gate:
 
 missav-probe:
 	bash scripts/start.sh bash scripts/missav_probe.sh
+
+crawler-once:
+	bash scripts/crawler_once.sh
+
+crawler-loop:
+	bash scripts/crawler_loop.sh
+
+crawler-export:
+	bash scripts/export_crawler_data.sh
+
+crawler-import:
+	bash scripts/import_crawler_data.sh $(SNAPSHOT)

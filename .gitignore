@@ -78,3 +78,6 @@ data/model/
 
 # Codex local marker
 .codex
+
+# Crawler export snapshots
+exports/
