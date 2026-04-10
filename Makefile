@@ -33,3 +33,9 @@ start-env:
 publish:
 	docker tag bustag-app-dev gxtrobot/bustag-app:latest
 	docker push gxtrobot/bustag-app:latest
+
+web-drill-fastapi:
+	bash scripts/web_stack_drill.sh fastapi
+
+web-drill-bottle:
+	bash scripts/web_stack_drill.sh bottle

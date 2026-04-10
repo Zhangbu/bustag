@@ -13,9 +13,15 @@ from bustag.app.api_service import (
     build_healthz_payload,
     build_task_status_payload,
     generate_request_id,
+    get_slow_request_threshold_ms,
+    is_api_observed_path,
+    record_api_metric,
+    should_warn_slow_request,
 )
 from bustag.app.index import initialize_runtime
 from bustag.util import logger
+
+API_SLOW_THRESHOLD_MS = get_slow_request_threshold_ms()
 
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
@@ -29,6 +35,26 @@ def _error_response(status_code: int, message: str, code: str, request_id: str) 
     response = JSONResponse(status_code=status_code, content=payload)
     response.headers['X-Request-ID'] = request_id
     return response
+
+
+def _record_and_log(framework: str, method: str, path: str, status_code: int, duration_ms: float, request_id: str) -> None:
+    if not is_api_observed_path(path):
+        return
+
+    is_slow = should_warn_slow_request(duration_ms, API_SLOW_THRESHOLD_MS)
+    record_api_metric(framework, path, status_code, duration_ms, slow=is_slow)
+
+    if is_slow:
+        logger.warning(
+            'API %s slow %s %s -> %s %.2fms (threshold=%.2fms) rid=%s',
+            framework,
+            method,
+            path,
+            status_code,
+            duration_ms,
+            API_SLOW_THRESHOLD_MS,
+            request_id,
+        )
 
 
 def create_fastapi_app(start_background_scheduler: bool = False) -> FastAPI:
@@ -47,6 +73,7 @@ def create_fastapi_app(start_background_scheduler: bool = False) -> FastAPI:
             response = await call_next(request)
         except Exception:
             duration_ms = (time.perf_counter() - start) * 1000
+            _record_and_log('fastapi', request.method, request.url.path, 500, duration_ms, request_id)
             logger.exception(
                 'API fastapi %s %s -> 500 %.2fms rid=%s',
                 request.method,
@@ -59,6 +86,7 @@ def create_fastapi_app(start_background_scheduler: bool = False) -> FastAPI:
         response.headers['X-Request-ID'] = request_id
 
         duration_ms = (time.perf_counter() - start) * 1000
+        _record_and_log('fastapi', request.method, request.url.path, response.status_code, duration_ms, request_id)
         logger.info(
             'API fastapi %s %s -> %s %.2fms rid=%s',
             request.method,

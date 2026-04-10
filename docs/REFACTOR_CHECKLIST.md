@@ -22,10 +22,10 @@
   - [x] Phase 1: 新增 FastAPI 最小 API（/healthz、/task/{task_id}）+ CLI 启动命令
   - [x] Phase 2: 抽取共享 service 层，消除 Bottle/FastAPI 业务重复
   - [x] Phase 3: 鉴权、错误模型、可观测性统一并评估默认入口切换
-- [ ] M7: API 可靠性增强（灰度前）
+- [x] M7: API 可靠性增强（灰度前）
   - [x] Phase 1: FastAPI 异常兜底与统一 500 错误模型
-  - [ ] Phase 2: API 指标埋点与慢请求阈值告警
-  - [ ] Phase 3: 灰度开关与回滚演练脚本
+  - [x] Phase 2: API 指标埋点与慢请求阈值告警
+  - [x] Phase 3: 灰度开关与回滚演练脚本
 
 ## M1 交付项
 
@@ -99,3 +99,18 @@
 - FastAPI 中间件异常兜底：统一返回 `internal_error` 错误结构
 - 异常响应保留请求链路 ID：`X-Request-ID`
 - FastAPI 异常路径测试：`tests/test_fastapi_app.py::test_internal_error_has_unified_payload`
+
+## M7 交付项（Phase 2）
+
+- 共享 API 指标埋点：总请求、慢请求、按框架/路径/状态统计
+- 慢请求阈值：`BUSTAG_API_SLOW_MS`（默认 800ms）
+- Bottle/FastAPI 双栈统一慢请求告警日志
+- 配置示例补充：`.env.example`
+
+## M7 交付项（Phase 3）
+
+- 运行栈开关：`BUSTAG_WEB_STACK=bottle|fastapi`
+- 生产入口按栈选择：`bustag/app/wsgi.py` + `docker/entry.sh`
+- 灰度/回滚演练脚本：`scripts/web_stack_drill.sh`
+- 演练快捷命令：`make web-drill-fastapi` / `make web-drill-bottle`
+- 栈选择测试：`tests/test_wsgi_stack.py`

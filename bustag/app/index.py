@@ -16,7 +16,15 @@ import bottle
 from bottle import hook, redirect, request, response, route, run, static_file, template
 
 from bustag import __version__
-from bustag.app.api_service import build_healthz_payload, build_task_status_payload, generate_request_id
+from bustag.app.api_service import (
+    build_healthz_payload,
+    build_task_status_payload,
+    generate_request_id,
+    get_slow_request_threshold_ms,
+    is_api_observed_path,
+    record_api_metric,
+    should_warn_slow_request,
+)
 from bustag.app.local import add_local_fanhao, load_tags_db
 from bustag.app.schedule import add_download_job, fetch_data, get_task_info, start_scheduler
 from bustag.app.tasks import task_queue
@@ -44,6 +52,7 @@ PUBLIC_ROUTES = ['/login', '/static', '/healthz']
 _SECRET_KEY = None
 _RUNTIME_INITIALIZED = False
 _SCHEDULER_STARTED = False
+API_SLOW_THRESHOLD_MS = get_slow_request_threshold_ms()
 
 
 def _setup_template_path():
@@ -152,8 +161,22 @@ def _close_db():
         response.set_header('X-Request-ID', request_id)
 
     start = request.environ.get('bustag.request_start')
-    if start and (request.path == '/healthz' or request.path.startswith('/task/')):
+    if start and is_api_observed_path(request.path):
         duration_ms = (time.perf_counter() - start) * 1000
+        is_slow = should_warn_slow_request(duration_ms, API_SLOW_THRESHOLD_MS)
+        record_api_metric('bottle', request.path, response.status_code, duration_ms, slow=is_slow)
+
+        if is_slow:
+            logger.warning(
+                "API bottle slow %s %s -> %s %.2fms (threshold=%.2fms) rid=%s",
+                request.method,
+                request.path,
+                response.status_code,
+                duration_ms,
+                API_SLOW_THRESHOLD_MS,
+                request_id,
+            )
+
         logger.info(
             "API bottle %s %s -> %s %.2fms rid=%s",
             request.method,

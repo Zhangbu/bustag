@@ -5,6 +5,7 @@ pytest.importorskip('httpx')
 
 from fastapi.testclient import TestClient
 
+from bustag.app import api_service
 import bustag.app.fastapi_app as fastapi_app
 
 
@@ -92,3 +93,17 @@ def test_internal_error_has_unified_payload(monkeypatch):
         'request_id': 'rid-500',
         'error': {'code': 'internal_error', 'message': '服务器内部错误'},
     }
+
+
+def test_metrics_recorded_for_fastapi_paths(monkeypatch):
+    api_service.reset_api_metrics_for_test()
+    client = _build_client(monkeypatch)
+
+    resp = client.get('/healthz', headers={'X-Request-ID': 'rid-metric'})
+    assert resp.status_code == 200
+
+    snapshot = api_service.get_api_metrics_snapshot()
+    assert snapshot['total'] >= 1
+    assert snapshot['by_framework'].get('fastapi', 0) >= 1
+    assert snapshot['by_path'].get('/healthz', 0) >= 1
+    assert snapshot['by_status'].get('200', 0) >= 1

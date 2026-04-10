@@ -266,3 +266,55 @@
   - `52 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Revert this commit to restore previous FastAPI exception behavior.
+
+## Round 12
+- Time: 2026-04-10 08:50:01 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added shared API metrics counters (total/slow/by framework/path/status)
+  - Added configurable slow-request threshold (`BUSTAG_API_SLOW_MS`, default 800ms)
+  - Added unified slow-request warning logs in both Bottle and FastAPI API paths
+  - Added shared metrics/threshold tests and FastAPI metrics integration test
+  - Updated `.env.example` with API observability config
+  - Marked M7 Phase 2 completed in checklist
+- Files:
+  - `bustag/app/api_service.py`
+  - `bustag/app/fastapi_app.py`
+  - `bustag/app/index.py`
+  - `tests/test_api_service.py`
+  - `tests/test_fastapi_app.py`
+  - `.env.example`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `55 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove in-memory API metrics and slow-request warning logic.
+
+## Round 13
+- Time: 2026-04-10 09:36:32 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added production web stack switch (`BUSTAG_WEB_STACK`) for Bottle/FastAPI safe replacement
+  - Updated WSGI selector to lazy-load FastAPI path and avoid Bottle path hard dependency
+  - Updated docker entry to choose gunicorn worker based on selected web stack
+  - Added web-stack rollout/rollback drill script (`scripts/web_stack_drill.sh`)
+  - Added drill Make targets and env example for stack switch
+  - Added WSGI stack selection tests and completed M7 Phase 3
+- Files:
+  - `bustag/app/wsgi.py`
+  - `docker/entry.sh`
+  - `scripts/web_stack_drill.sh`
+  - `Makefile`
+  - `.env.example`
+  - `tests/test_wsgi_stack.py`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `59 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Set `BUSTAG_WEB_STACK=bottle` and restart service; or revert this commit to remove stack-switch path.
