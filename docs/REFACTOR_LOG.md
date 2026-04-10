@@ -318,3 +318,26 @@
   - `59 passed, 3 skipped, 1 warning`
 - Rollback note:
   - Set `BUSTAG_WEB_STACK=bottle` and restart service; or revert this commit to remove stack-switch path.
+
+## Round 14
+- Time: 2026-04-10 09:56:29 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added pre-release API contract check script for stack switch readiness
+  - Added Make targets for precheck execution (`web-precheck-fastapi`, `web-precheck-bottle`)
+  - Added rollout runbook for switch/rollback operations
+  - Added env example for base URL used by rollout/precheck scripts
+  - Added M8 milestone and marked Phase 1 completed
+- Files:
+  - `scripts/pre_release_web_check.sh`
+  - `Makefile`
+  - `.env.example`
+  - `docs/WEB_STACK_ROLLOUT.md`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `59 passed, 3 skipped, 1 warning`
+- Rollback note:
+  - Revert this commit to remove pre-release automation and keep manual switch checks.

@@ -26,6 +26,9 @@
   - [x] Phase 1: FastAPI 异常兜底与统一 500 错误模型
   - [x] Phase 2: API 指标埋点与慢请求阈值告警
   - [x] Phase 3: 灰度开关与回滚演练脚本
+- [ ] M8: 默认切换发布治理
+  - [x] Phase 1: 预发验收脚本（接口契约自动检查）
+  - [ ] Phase 2: 发布流水线门禁集成
 
 ## M1 交付项
 
@@ -114,3 +117,10 @@
 - 灰度/回滚演练脚本：`scripts/web_stack_drill.sh`
 - 演练快捷命令：`make web-drill-fastapi` / `make web-drill-bottle`
 - 栈选择测试：`tests/test_wsgi_stack.py`
+
+## M8 交付项（Phase 1）
+
+- 预发自动验收脚本：`scripts/pre_release_web_check.sh`
+- 验收内容：`/healthz` 与 `/task/{missing}` 契约、状态码、`X-Request-ID`
+- 演练命令：`make web-precheck-fastapi`、`make web-precheck-bottle`
+- 切换 runbook：`docs/WEB_STACK_ROLLOUT.md`

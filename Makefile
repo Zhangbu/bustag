@@ -39,3 +39,9 @@ web-drill-fastapi:
 
 web-drill-bottle:
 	bash scripts/web_stack_drill.sh bottle
+
+web-precheck-fastapi:
+	bash scripts/pre_release_web_check.sh fastapi
+
+web-precheck-bottle:
+	bash scripts/pre_release_web_check.sh bottle
