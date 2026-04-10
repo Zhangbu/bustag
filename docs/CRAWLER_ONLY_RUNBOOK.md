@@ -11,6 +11,13 @@
 - conda 环境：`bustag`
 - `.env` 已按 `.env.example` 配置
 
+建议在 `.env` 显式配置：
+
+```bash
+BUSTAG_CONDA_ENV="bustag"
+BUSTAG_CONDA_BIN="/home/ubuntu/miniconda3/bin/conda"
+```
+
 ## 1. 线上仅跑一次爬虫
 
 ```bash

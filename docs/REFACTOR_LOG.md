@@ -434,6 +434,26 @@
 - Rollback note:
   - Revert this commit to restore previous env override behavior (empty env will no longer override).
 
+## Round 19
+- Time: 2026-04-10 11:26:46 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Fixed crawler-only conda path resolution for server environments (`ubuntu` path compatible)
+  - Added conda auto-discovery fallback sequence in `crawler_once.sh`
+  - Added explicit `.env` guidance for `BUSTAG_CONDA_BIN` in crawler runbook
+  - Updated `.env.example` to include `BUSTAG_CONDA_BIN`
+- Files:
+  - `scripts/crawler_once.sh`
+  - `.env.example`
+  - `docs/CRAWLER_ONLY_RUNBOOK.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `bash -n scripts/crawler_once.sh`
+- Test result:
+  - `syntax check passed`
+- Rollback note:
+  - Revert this commit to restore fixed-path conda behavior.
+
 ## Round 18
 - Time: 2026-04-10 11:14:01 CST
 - Branch: `codex/crawler-only-mode`
