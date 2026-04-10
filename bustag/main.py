@@ -54,10 +54,13 @@ def download(count):
 
     source = get_source()
     source.configure(root_url)
+    seed_urls = source.build_page_urls(1, 1)
+    if not seed_urls:
+        seed_urls = [root_url]
 
     asyncio.run(
         async_download(
-            [root_url],
+            seed_urls,
             count_val,
             router=source.router,
             fetcher=source.fetch,

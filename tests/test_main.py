@@ -83,3 +83,84 @@ def test_serve_web_fastapi(monkeypatch):
         'reload': True,
         'scheduler': False,
     }
+
+
+def test_download_uses_source_seed_urls(monkeypatch):
+    runner = CliRunner()
+    called = {}
+
+    from bustag import main as main_module
+
+    class _DummySource:
+        def __init__(self):
+            self.router = object()
+            self.fetch = object()
+            self.normalize_url = lambda u: u
+            self.configured = None
+
+        def configure(self, root_url):
+            self.configured = root_url
+
+        def build_page_urls(self, start_page, end_page):
+            assert (start_page, end_page) == (1, 1)
+            return ['https://missav.ai/en', 'https://missav.ai/en/new']
+
+    dummy_source = _DummySource()
+
+    monkeypatch.setitem(main_module.APP_CONFIG, 'download.root_path', 'https://missav.ai/')
+    monkeypatch.setitem(main_module.APP_CONFIG, 'download.count', '100')
+    monkeypatch.setattr(main_module, '_ensure_db_ready', lambda: None)
+    monkeypatch.setattr(main_module, 'get_source', lambda: dummy_source)
+
+    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None):
+        called['start_urls'] = start_urls
+        called['count'] = count
+        called['router'] = router
+        called['fetcher'] = fetcher
+        called['url_normalizer'] = url_normalizer
+
+    monkeypatch.setattr(main_module, 'async_download', fake_async_download)
+
+    result = runner.invoke(main_module.main, ['download'])
+    assert result.exit_code == 0
+    assert called['start_urls'] == ['https://missav.ai/en', 'https://missav.ai/en/new']
+    assert called['count'] == 100
+
+
+def test_download_fallback_to_root_when_seed_empty(monkeypatch):
+    runner = CliRunner()
+    called = {}
+
+    from bustag import main as main_module
+
+    class _DummySource:
+        def __init__(self):
+            self.router = object()
+            self.fetch = object()
+            self.normalize_url = lambda u: u
+            self.configured = None
+
+        def configure(self, root_url):
+            self.configured = root_url
+
+        def build_page_urls(self, start_page, end_page):
+            return []
+
+    dummy_source = _DummySource()
+    root_url = 'https://example.com/root'
+
+    monkeypatch.setitem(main_module.APP_CONFIG, 'download.root_path', root_url)
+    monkeypatch.setitem(main_module.APP_CONFIG, 'download.count', '100')
+    monkeypatch.setattr(main_module, '_ensure_db_ready', lambda: None)
+    monkeypatch.setattr(main_module, 'get_source', lambda: dummy_source)
+
+    async def fake_async_download(start_urls, count, router=None, fetcher=None, url_normalizer=None):
+        called['start_urls'] = start_urls
+        called['count'] = count
+
+    monkeypatch.setattr(main_module, 'async_download', fake_async_download)
+
+    result = runner.invoke(main_module.main, ['download'])
+    assert result.exit_code == 0
+    assert called['start_urls'] == [root_url]
+    assert called['count'] == 100

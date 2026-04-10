@@ -504,6 +504,26 @@
 - Rollback note:
   - Revert this commit to remove core crawler process-level trace logging.
 
+## Round 22
+- Time: 2026-04-10 14:48:52 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Fixed crawler start-seed logic in CLI download flow:
+    - use source-generated seeds (`build_page_urls(1,1)`) instead of raw root URL
+    - fallback to root URL if source returns empty seeds
+  - This resolves MissAV root-path `route_miss` issue (`url=https://missav.ai path=''`)
+  - Added unit tests for seed usage and fallback behavior
+- Files:
+  - `bustag/main.py`
+  - `tests/test_main.py`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s tests/test_main.py tests/test_schedule_async.py`
+- Test result:
+  - `8 passed`
+- Rollback note:
+  - Revert this commit to restore previous root-url-only download seeding behavior.
+
 ## Round 18
 - Time: 2026-04-10 11:14:01 CST
 - Branch: `codex/crawler-only-mode`
