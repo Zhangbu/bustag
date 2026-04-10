@@ -3,15 +3,24 @@ Source adapter registry.
 """
 from __future__ import annotations
 
+import importlib
+
 from bustag.spider.sources.base import SourceAdapter
 from bustag.spider.sources.bus import BusSourceAdapter
-from bustag.spider.sources.missav import MissAVSourceAdapter
-from bustag.util import APP_CONFIG
+from bustag.util import APP_CONFIG, logger
 
-_SOURCES: dict[str, SourceAdapter] = {
-    'bus': BusSourceAdapter(),
-    'missav': MissAVSourceAdapter(),
-}
+
+def _build_sources() -> dict[str, SourceAdapter]:
+    sources: dict[str, SourceAdapter] = {'bus': BusSourceAdapter()}
+    try:
+        missav_mod = importlib.import_module('bustag.spider.sources.missav')
+        sources['missav'] = missav_mod.MissAVSourceAdapter()
+    except Exception as exc:
+        logger.warning('MissAV source disabled: %s', exc)
+    return sources
+
+
+_SOURCES: dict[str, SourceAdapter] = _build_sources()
 
 
 def get_source(name: str | None = None) -> SourceAdapter:

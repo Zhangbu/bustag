@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
         'browser': 'chrome136',
         'user_agent': 'Mozilla/5.0',
         'cookie': '',
+        'probe_url': '',
     },
     'auth': {
         'secret_key': '',
@@ -118,6 +119,9 @@ def load_config():
     env_missav_user_agent = os.environ.get('BUSTAG_MISSAV_USER_AGENT')
     if env_missav_user_agent:
         APP_CONFIG['missav.user_agent'] = env_missav_user_agent
+    env_missav_probe_url = os.environ.get('BUSTAG_MISSAV_PROBE_URL')
+    if env_missav_probe_url:
+        APP_CONFIG['missav.probe_url'] = env_missav_probe_url
     logger.debug(APP_CONFIG)
     return APP_CONFIG
 

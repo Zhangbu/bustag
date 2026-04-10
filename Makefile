@@ -48,3 +48,6 @@ web-precheck-bottle:
 
 web-release-gate:
 	bash scripts/start.sh bash scripts/release_web_gate.sh
+
+missav-probe:
+	bash scripts/start.sh bash scripts/missav_probe.sh

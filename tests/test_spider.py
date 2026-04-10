@@ -1,4 +1,5 @@
 import pytest
+import importlib
 from bustag.spider.bus_spider import process_item, router
 from bustag.spider.sources import get_source, list_sources
 
@@ -35,3 +36,20 @@ def test_source_build_urls():
     urls = source.build_page_urls(1, 2)
     assert urls == ['https://example.com/page/1', 'https://example.com/page/2']
     assert source.get_item_url('ABC-123') == 'https://example.com/ABC-123'
+
+
+def test_source_registry_fallback_when_missav_unavailable(monkeypatch):
+    import bustag.spider.sources as source_mod
+
+    real_import_module = importlib.import_module
+
+    def fake_import_module(name, package=None):
+        if name == 'bustag.spider.sources.missav':
+            raise ModuleNotFoundError("No module named 'curl_cffi'")
+        return real_import_module(name, package)
+
+    monkeypatch.setattr(importlib, 'import_module', fake_import_module)
+    monkeypatch.setattr(source_mod, '_SOURCES', source_mod._build_sources())
+
+    assert 'bus' in source_mod.list_sources()
+    assert 'missav' not in source_mod.list_sources()

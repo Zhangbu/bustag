@@ -203,6 +203,7 @@ docker run --rm -d -e TZ=Asia/Shanghai -v $(pwd)/data:/app/data -p 8000:8000 bus
   - `browser`: `curl_cffi` 浏览器指纹, 默认 `chrome136`
   - `user_agent`: MissAV 请求使用的 User-Agent
   - `cookie`: 可留空, 建议用 `BUSTAG_MISSAV_COOKIE` 环境变量注入
+  - `probe_url`: MissAV 探针URL, 可选（也可用环境变量 `BUSTAG_MISSAV_PROBE_URL`）
   - `[auth]`
   - `admin_username`: 默认管理员用户名
   - `admin_password`: 默认管理员密码, 建议通过 `BUSTAG_ADMIN_PASSWORD` 环境变量覆盖
@@ -226,6 +227,14 @@ conda run -n bustag env \
   BUSTAG_MISSAV_PROXY='http://127.0.0.1:7897' \
   BUSTAG_MISSAV_USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36' \
   python bustag/app/index.py
+```
+
+### MissAV Probe
+
+建议在发布前执行探针确认站点可达和基础抓取能力：
+
+```bash
+make missav-probe
 ```
 
 ### One Command Start

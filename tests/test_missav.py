@@ -1,3 +1,5 @@
+import importlib.util
+
 from bustag.spider.parser_missav import extract_fanhao_from_slug, parse_item
 from bustag.spider.sources import get_source, list_sources
 
@@ -35,7 +37,11 @@ SAMPLE_MISSAV_HTML = """
 
 
 def test_missav_source_registered():
-    assert 'missav' in list_sources()
+    has_curl_cffi = importlib.util.find_spec('curl_cffi') is not None
+    if has_curl_cffi:
+        assert 'missav' in list_sources()
+    else:
+        assert 'missav' not in list_sources()
 
 
 def test_missav_build_urls():

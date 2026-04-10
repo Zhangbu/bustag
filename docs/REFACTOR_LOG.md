@@ -377,3 +377,39 @@
   - `web-release-gate PASS (bottle contract passed; fastapi skipped due missing dependency with explicit gate log)`
 - Rollback note:
   - Revert this commit to restore previous gate implementation and auth behavior for `/task`.
+
+## Round 16
+- Time: 2026-04-10 10:46:33 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added production release checklist doc and MissAV status doc for deployment/governance
+  - Added MissAV probe command (`make missav-probe`) and probe script (`scripts/missav_probe.sh`)
+  - Added MissAV probe env override (`BUSTAG_MISSAV_PROBE_URL`)
+  - Hardened source registry with lazy optional MissAV registration:
+    - missing MissAV deps no longer breaks default `bus` runtime
+  - Added source fallback test coverage and adjusted MissAV registry assertions for optional dependency mode
+  - Added missing MissAV runtime dependency declaration (`curl_cffi`) in packaging files
+- Files:
+  - `docs/PROD_RELEASE_CHECKLIST.md`
+  - `docs/MISSAV_STATUS.md`
+  - `docs/REFACTOR_CHECKLIST.md`
+  - `docs/REFACTOR_LOG.md`
+  - `scripts/missav_probe.sh`
+  - `Makefile`
+  - `README.md`
+  - `bustag/util.py`
+  - `bustag/spider/sources/__init__.py`
+  - `tests/test_spider.py`
+  - `tests/test_missav.py`
+  - `pyproject.toml`
+  - `requirements.txt`
+  - `.env.example`
+- Test command:
+  - `bash -n scripts/missav_probe.sh`
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s`
+- Test result:
+  - `62 passed, 3 skipped, 1 warning`
+- Note:
+  - `missav-probe` 在线请求未在当前沙箱执行（受外网访问限制），已提供发布前执行步骤。
+- Rollback note:
+  - Revert this commit to remove MissAV optional registration/probe and docs additions.

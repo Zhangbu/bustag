@@ -131,3 +131,11 @@
 - 门禁命令：`make web-release-gate`
 - 双栈自动验收：Bottle 通过 `serve-web` 真实启动验收，FastAPI 通过进程内契约验收（`fastapi.testclient`）
 - CI 可配置项：`BUSTAG_GATE_HOST`、`BUSTAG_GATE_PORT`、`BUSTAG_GATE_WAIT_SECONDS`、`BUSTAG_GATE_STACKS`、`BUSTAG_GATE_ALLOW_SKIP_MISSING_FASTAPI`
+
+## MissAV 稳定化（专项）
+
+- 生产发布清单：`docs/PROD_RELEASE_CHECKLIST.md`
+- MissAV 状态文档：`docs/MISSAV_STATUS.md`
+- 依赖声明补齐：`curl_cffi`（`pyproject.toml`、`requirements.txt`）
+- Source 懒加载降级：MissAV 依赖缺失不影响 `bus` 运行
+- 探针命令：`make missav-probe`（`scripts/missav_probe.sh`）
