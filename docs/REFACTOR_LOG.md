@@ -413,3 +413,23 @@
   - `missav-probe` 在线请求未在当前沙箱执行（受外网访问限制），已提供发布前执行步骤。
 - Rollback note:
   - Revert this commit to remove MissAV optional registration/probe and docs additions.
+
+## Round 17
+- Time: 2026-04-10 11:04:48 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Fixed MissAV env override behavior so empty env values can override `config.ini`
+  - Resolved hardcoded proxy issue in practice: `BUSTAG_MISSAV_PROXY=''` now correctly disables configured proxy
+  - Added regression test for empty proxy override
+  - Updated README with explicit proxy-clear usage
+- Files:
+  - `bustag/util.py`
+  - `tests/test_util.py`
+  - `README.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s tests/test_util.py tests/test_missav.py`
+- Test result:
+  - `11 passed`
+- Rollback note:
+  - Revert this commit to restore previous env override behavior (empty env will no longer override).

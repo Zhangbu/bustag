@@ -111,16 +111,16 @@ def load_config():
     if env_admin_password:
         APP_CONFIG['auth.admin_password'] = env_admin_password
     env_missav_cookie = os.environ.get('BUSTAG_MISSAV_COOKIE')
-    if env_missav_cookie:
+    if env_missav_cookie is not None:
         APP_CONFIG['missav.cookie'] = env_missav_cookie
     env_missav_proxy = os.environ.get('BUSTAG_MISSAV_PROXY')
-    if env_missav_proxy:
+    if env_missav_proxy is not None:
         APP_CONFIG['missav.proxy'] = env_missav_proxy
     env_missav_user_agent = os.environ.get('BUSTAG_MISSAV_USER_AGENT')
-    if env_missav_user_agent:
+    if env_missav_user_agent is not None:
         APP_CONFIG['missav.user_agent'] = env_missav_user_agent
     env_missav_probe_url = os.environ.get('BUSTAG_MISSAV_PROBE_URL')
-    if env_missav_probe_url:
+    if env_missav_probe_url is not None:
         APP_CONFIG['missav.probe_url'] = env_missav_probe_url
     logger.debug(APP_CONFIG)
     return APP_CONFIG

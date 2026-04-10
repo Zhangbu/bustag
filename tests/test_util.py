@@ -56,3 +56,9 @@ def test_config_defaults():
     print(f'download.count: {conf.get("download", "count")}')
     print(f'download.interval: {conf.get("download", "interval")}')
     print(f'options.proxy: {conf.get("options", "proxy")}')
+
+
+def test_env_can_clear_missav_proxy(monkeypatch):
+    monkeypatch.setenv('BUSTAG_MISSAV_PROXY', '')
+    util.load_config()
+    assert util.APP_CONFIG.get('missav.proxy') == ''

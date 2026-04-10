@@ -219,6 +219,12 @@ export BUSTAG_MISSAV_PROXY='http://127.0.0.1:7897'
 export BUSTAG_MISSAV_USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36'
 ```
 
+如果 `config.ini` 配置了代理但线上不需要，可在环境变量里显式清空：
+
+```bash
+export BUSTAG_MISSAV_PROXY=''
+```
+
 如果你在 WSL 的 conda 环境里运行，也可以这样：
 
 ```bash
