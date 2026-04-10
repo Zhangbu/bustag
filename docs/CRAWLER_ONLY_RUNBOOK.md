@@ -27,7 +27,7 @@ make crawler-once
 
 日志位置：
 - 汇总日志：`logs/crawler_summary.log`
-- 单次详细日志：`logs/crawler_*.log`
+- 单次详细日志：`logs/crawler_*.log`（包含抓取 URL、状态码、处理成功/失败等过程信息）
 
 ## 2. 线上循环跑爬虫（后台长期运行）
 

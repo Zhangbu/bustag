@@ -483,6 +483,27 @@
 - Rollback note:
   - Revert this commit to remove crawler log summary/detail outputs and env syntax guard.
 
+## Round 21
+- Time: 2026-04-10 14:40:39 CST
+- Branch: `codex/refactor-m1-baseline`
+- Scope:
+  - Added in-process crawler trace logs in core async crawler:
+    - per-URL fetch start/success/failure
+    - status/size/elapsed time
+    - route miss / handler success / handler failure
+    - crawl summary metrics at the end
+  - Updated crawler-only runbook to clarify detail log contains page-level process logs
+- Files:
+  - `bustag/spider/crawler.py`
+  - `docs/CRAWLER_ONLY_RUNBOOK.md`
+  - `docs/REFACTOR_LOG.md`
+- Test command:
+  - `/home/zjxfun/miniconda3/bin/conda run -n bustag pytest -s tests/test_schedule_async.py tests/test_spider.py`
+- Test result:
+  - `7 passed, 1 skipped`
+- Rollback note:
+  - Revert this commit to remove core crawler process-level trace logging.
+
 ## Round 18
 - Time: 2026-04-10 11:14:01 CST
 - Branch: `codex/crawler-only-mode`
